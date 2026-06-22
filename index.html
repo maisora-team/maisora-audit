@@ -548,6 +548,22 @@
 <body>
 <div id="app" aria-live="polite"></div>
 
+<!-- ============================================================
+     MAISORA LICENSE GATE — copre il tool finché non viene
+     inserita una license key Gumroad valida. Non tocca il
+     tool sottostante: è solo un overlay sopra.
+     ============================================================ -->
+<div id="mg-gate" style="position:fixed;inset:0;z-index:999999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--body);">
+  <div style="max-width:380px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px 28px;">
+    <h2 style="font-family:var(--display);font-size:22px;margin:0 0 6px;color:var(--ink);">Unlock your Audit</h2>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 20px;line-height:1.5;">Enter the license key from your Gumroad purchase email.</p>
+    <input id="mg-key" type="text" placeholder="License key" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;font-family:var(--body);">
+    <button id="mg-btn" style="width:100%;padding:12px;border:none;border-radius:var(--radius-sm);background:var(--teal);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--body);">Unlock</button>
+    <p id="mg-err" style="display:none;color:#B23A2E;font-size:13px;margin:10px 0 0;"></p>
+    <p style="font-size:12px;color:var(--muted);margin:16px 0 0;">Don't have a key yet? <a href="https://gumroad.com/l/REPLACE_WITH_GUMROAD_SLUG" style="color:var(--teal);">Get the Listing Health Audit — $67</a></p>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -1817,6 +1833,67 @@ document.addEventListener('keydown', (e) => {
 });
 
 render();
+</script>
+
+<script>
+(function(){
+  // ⚠️ DA FARE STASERA: sostituisci con il product_id reale —
+  // lo trovi su Gumroad quando abiliti "Generate a unique license
+  // key per sale" nel content tab del prodotto.
+  var GUMROAD_PRODUCT_ID = "REPLACE_WITH_PRODUCT_ID";
+  var STORAGE_KEY = "mg_unlocked_v1";
+  // Chiave di anteprima fissa: usala per fare gli screenshot stasera
+  // e per far provare il tool a un influencer senza fargli pagare.
+  // Non è pubblica da nessuna parte: la dai tu, a voce o in chat.
+  var PREVIEW_KEY = "MAISORA-PREVIEW-2026";
+
+  var gate = document.getElementById('mg-gate');
+  if (localStorage.getItem(STORAGE_KEY) === 'true') {
+    gate.style.display = 'none';
+  }
+
+  document.getElementById('mg-btn').addEventListener('click', unlock);
+  document.getElementById('mg-key').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') unlock();
+  });
+
+  function unlock(){
+    var key = document.getElementById('mg-key').value.trim();
+    var err = document.getElementById('mg-err');
+    err.style.display = 'none';
+    if (!key) {
+      err.textContent = 'Enter your license key.';
+      err.style.display = 'block';
+      return;
+    }
+    if (key === PREVIEW_KEY) {
+      localStorage.setItem(STORAGE_KEY, 'true');
+      gate.style.display = 'none';
+      return;
+    }
+    var body = new URLSearchParams();
+    body.append('product_id', GUMROAD_PRODUCT_ID);
+    body.append('license_key', key);
+    body.append('increment_uses_count', 'false');
+
+    fetch('https://api.gumroad.com/v2/licenses/verify', { method:'POST', body:body })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var ok = data.success && data.purchase && !data.purchase.refunded && !data.purchase.disputed;
+        if (ok) {
+          localStorage.setItem(STORAGE_KEY, 'true');
+          gate.style.display = 'none';
+        } else {
+          err.textContent = 'Key not valid. Check your Gumroad receipt email.';
+          err.style.display = 'block';
+        }
+      })
+      .catch(function(){
+        err.textContent = 'Connection error — try again in a moment.';
+        err.style.display = 'block';
+      });
+  }
+})();
 </script>
 </body>
 </html>
