@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listing Health Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15202B;
+    --paper:#EDF1EF;
+    --surface:#FFFFFF;
+    --teal:#0E7C6B;
+    --teal-bright:#15A38C;
+    --teal-wash:#E2EFEA;
+    --amber:#B9741A;
+    --muted:#5F7077;
+    --line:#D7E0DC;
+    --line-soft:#E6ECE9;
+    --shadow:0 1px 2px rgba(21,32,43,.04), 0 8px 30px rgba(21,32,43,.06);
+    --radius:16px;
+    --radius-sm:12px;
+    --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --body:"Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--body);
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(21,163,140,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(21,163,140,.05), transparent 55%),
+      var(--paper);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  #app{
+    max-width:680px;
+    margin:0 auto;
+    padding:24px 20px 64px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- Top bar / progress ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-family:var(--display);
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:-.01em;
+  }
+  .brand .mark{
+    width:22px;height:22px;border-radius:7px;
+    background:linear-gradient(150deg,var(--teal-bright),var(--teal));
+    display:grid;place-items:center;
+    box-shadow:0 2px 6px rgba(14,124,107,.35);
+  }
+  .brand .mark svg{display:block;}
+  .brand .pct{color:var(--muted);font-family:var(--body);font-weight:600;font-size:13px;}
+
+  .sections{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:7px;
+    margin-bottom:6px;
+  }
+  .seg{
+    display:flex;flex-direction:column;gap:6px;align-items:stretch;
+  }
+  .seg .bar{
+    height:5px;border-radius:99px;background:var(--line);
+    overflow:hidden;
+  }
+  .seg .bar i{
+    display:block;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,var(--teal),var(--teal-bright));
+    transition:width .45s cubic-bezier(.22,1,.36,1);
+  }
+  .seg .lbl{
+    font-size:10.5px;font-weight:600;letter-spacing:.02em;
+    text-transform:uppercase;color:var(--muted);text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    transition:color .3s;
+  }
+  .seg.active .lbl{color:var(--teal);}
+  .seg.done .lbl{color:var(--ink);}
+  @media(max-width:560px){ .seg .lbl{display:none;} .sections{gap:6px;} }
+
+  /* ---------- Card / stage ---------- */
+  .stage{
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:30px 28px 26px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+  }
+  @media(max-width:560px){ .stage{padding:24px 18px 20px;} #app{padding:18px 14px 40px;} }
+
+  .fade{ animation:fade .42s cubic-bezier(.22,1,.36,1); }
+  @keyframes fade{ from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:none;} }
+
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--teal);margin-bottom:14px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:99px;background:var(--teal-bright);}
+  .eyebrow .count{color:var(--muted);font-weight:600;letter-spacing:.02em;}
+
+  h1.q{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(22px,4.6vw,30px);
+    line-height:1.18;
+    letter-spacing:-.015em;
+    margin:0 0 8px;
+  }
+  .help{ color:var(--muted); font-size:15px; margin:0 0 22px; max-width:48ch; }
+  .help:empty{display:none;margin:0;}
+
+  /* ---------- Options ---------- */
+  .opts{ display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  .opt{
+    appearance:none;-webkit-appearance:none;
+    font-family:inherit;font-size:16px;color:var(--ink);
+    text-align:left;
+    background:var(--surface);
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:15px 16px;
+    display:flex;align-items:center;gap:13px;
+    cursor:pointer;
+    transition:border-color .16s, background .16s, transform .08s, box-shadow .16s;
+    width:100%;
+  }
+  .opt:hover{ border-color:var(--teal-bright); background:#FAFCFB; }
+  .opt:active{ transform:scale(.992); }
+  .opt:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(21,163,140,.32); border-color:var(--teal-bright); }
+  .opt .tick{
+    flex:none;width:22px;height:22px;border-radius:7px;
+    border:1.5px solid var(--line);
+    display:grid;place-items:center;
+    transition:border-color .16s, background .16s;
+  }
+  .opt.multi .tick{ border-radius:7px; }
+  .opt:not(.multi) .tick{ border-radius:99px; }
+  .opt .tick svg{ opacity:0; transform:scale(.6); transition:opacity .16s, transform .16s; }
+  .opt .txt{ flex:1; }
+  .opt.sel{ border-color:var(--teal); background:var(--teal-wash); }
+  .opt.sel .tick{ background:var(--teal); border-color:var(--teal); }
+  .opt.sel .tick svg{ opacity:1; transform:none; }
+  .opt.exclusive{ margin-top:4px; }
+  .opt.exclusive::before{
+    content:"";position:absolute;
+  }
+  .exsep{ height:1px;background:var(--line-soft);margin:6px 2px 2px; }
+
+  /* ---------- Footer nav ---------- */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:26px;padding-top:20px;border-top:1px solid var(--line-soft);
+  }
+  .selnote{ font-size:13px;color:var(--muted);font-weight:500; }
+  .btn{
+    font-family:var(--body);font-weight:600;font-size:15px;
+    border-radius:11px;padding:13px 22px;cursor:pointer;border:1.5px solid transparent;
+    transition:transform .08s, background .16s, border-color .16s, opacity .16s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(21,163,140,.32);}
+  .btn-primary{
+    background:var(--ink);color:#fff;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-primary:hover{ background:#0d1922; }
+  .btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-ghost{
+    background:transparent;color:var(--muted);border-color:var(--line);
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .btn-ghost:hover{ color:var(--ink);border-color:var(--teal-bright); }
+  .btn-ghost:disabled{ opacity:.35;cursor:not-allowed; }
+  .btn-teal{ background:var(--teal);color:#fff; }
+  .btn-teal:hover{ background:#0c6b5c; }
+
+  /* ---------- Start screen ---------- */
+  .hero{ text-align:left; }
+  .hero .kicker{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--teal);margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:var(--display);font-weight:700;
+    font-size:clamp(30px,7vw,46px);line-height:1.04;letter-spacing:-.025em;
+    margin:0 0 16px;
+  }
+  .hero h1 em{ font-style:normal;color:var(--teal); }
+  .hero p{ font-size:17px;color:var(--muted);margin:0 0 28px;max-width:46ch; }
+  .meta{ display:flex;flex-wrap:wrap;gap:18px;margin:0 0 30px; }
+  .meta .m{ display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--ink); }
+  .meta .m svg{flex:none;color:var(--teal);}
+  .start-cta{ display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
+  .start-cta .btn-primary{ font-size:16px;padding:15px 28px; }
+  .start-cta .note{ font-size:13px;color:var(--muted); }
+
+  .nameField{ display:block;margin:0 0 26px;max-width:380px; }
+  .nameLbl{ display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px; }
+  .nameLbl em{ font-style:normal;font-weight:500;color:var(--muted); }
+  .nameField input{
+    width:100%;font-family:inherit;font-size:15px;color:var(--ink);
+    background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 14px;transition:border-color .16s, box-shadow .16s;
+  }
+  .nameField input::placeholder{ color:#9AA9A4; }
+  .nameField input:focus{ outline:none;border-color:var(--teal-bright);box-shadow:0 0 0 3px rgba(21,163,140,.18); }
+
+  /* ---------- Review screen ---------- */
+  .review h1{
+    font-family:var(--display);font-weight:700;font-size:clamp(26px,5vw,34px);
+    letter-spacing:-.02em;margin:0 0 6px;line-height:1.1;
+  }
+  .review .sub{ color:var(--muted);font-size:16px;margin:0 0 26px;max-width:50ch; }
+  .rgroup{ margin-bottom:22px; }
+  .rgroup .gh{
+    font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--teal);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--line-soft);
+  }
+  .ritem{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+    width:100%;text-align:left;background:transparent;border:none;
+    padding:11px 6px;border-radius:9px;cursor:pointer;font-family:inherit;
+    transition:background .14s;
+  }
+  .ritem:hover{ background:var(--teal-wash); }
+  .ritem:focus-visible{ outline:none;box-shadow:0 0 0 3px rgba(21,163,140,.3); }
+  .ritem .qq{ font-size:14px;color:var(--muted);flex:1;line-height:1.4; }
+  .ritem .aa{ font-size:14.5px;font-weight:600;color:var(--ink);text-align:right;flex:none;max-width:48%; }
+  .ritem .edit{ font-size:12px;color:var(--teal);font-weight:600;margin-left:8px;opacity:0;transition:opacity .14s; }
+  .ritem:hover .edit{ opacity:1; }
+
+  /* ---------- Score placeholder (tomorrow's seam) ---------- */
+  .scorewrap{ text-align:center;padding:18px 0 8px; }
+  .gauge{
+    width:148px;height:148px;margin:8px auto 18px;border-radius:50%;
+    display:grid;place-items:center;position:relative;
+    background:conic-gradient(var(--line) 0 100%);
+    -webkit-mask:radial-gradient(farthest-side,transparent 64%, #000 65%);
+            mask:radial-gradient(farthest-side,transparent 64%, #000 65%);
+  }
+  .gaugeface{
+    position:relative;text-align:center;
+  }
+  .gaugeface .num{ font-family:var(--display);font-weight:700;font-size:40px;color:var(--muted);letter-spacing:-.02em; }
+  .gaugeface .den{ font-size:13px;color:var(--muted);font-weight:600; }
+  .seamcard{
+    background:var(--teal-wash);border:1px dashed var(--teal-bright);
+    border-radius:var(--radius-sm);padding:16px 18px;margin-top:8px;text-align:left;
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .seamcard svg{flex:none;color:var(--teal);margin-top:2px;}
+  .seamcard .st{font-weight:700;font-size:14px;margin:0 0 3px;}
+  .seamcard .sd{font-size:13.5px;color:var(--muted);margin:0;line-height:1.45;}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+  /* ---------- Report ---------- */
+  .report .rgauge{ text-align:center; padding:6px 0 4px; }
+  .report .gauge{ margin:6px auto 14px; }
+  .report .gaugeface .num{ color:var(--ink); }
+  .report .gaugeface .den{ color:var(--muted); }
+  .bandpill{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:700;letter-spacing:.02em;
+    padding:7px 14px;border-radius:99px;border:1.5px solid;
+  }
+  .bandpill .bdot{width:8px;height:8px;border-radius:99px;background:currentColor;}
+  .report h1.title{
+    font-family:var(--display);font-weight:700;font-size:clamp(24px,5vw,32px);
+    letter-spacing:-.02em;line-height:1.12;margin:16px 0 8px;text-align:center;
+  }
+  .report .interp{
+    font-size:16px;color:var(--ink);margin:0 auto 4px;max-width:52ch;
+    text-align:center;line-height:1.5;
+  }
+  .report .bandmeaning{ font-size:14px;color:var(--muted);text-align:center;margin:0 auto 22px;max-width:50ch; }
+  .nlmtag{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;
+    letter-spacing:.04em;text-transform:uppercase;color:var(--teal);
+    background:var(--teal-wash);border-radius:99px;padding:5px 12px;margin:0 0 4px;
+  }
+  .reportmeta{ font-size:12.5px;color:var(--muted);margin:10px 0 0; }
+  .reportmeta b{ color:var(--ink);font-weight:600; }
+
+  /* headline: the single biggest lever */
+  .headline{
+    display:flex;gap:13px;align-items:flex-start;text-align:left;
+    margin:18px 0 20px;padding:16px 18px;
+    background:linear-gradient(135deg,var(--teal-wash),#fff);
+    border:1px solid #BFE0D6;border-radius:var(--radius-sm);
+  }
+  .headline svg{flex:none;color:var(--teal);margin-top:3px;}
+  .headline .hk{ display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:4px; }
+  .headline .ht{ font-size:15.5px;font-weight:700;color:var(--ink);margin:0 0 4px;line-height:1.35; }
+  .headline .hb{ font-size:13.5px;color:var(--muted);margin:0;line-height:1.5; }
+
+  /* area breakdown */
+  .areas{
+    display:grid;gap:14px;margin:6px 0 24px;
+    padding:18px;border:1px solid var(--line-soft);border-radius:var(--radius-sm);
+    background:#FBFDFC;
+  }
+  .arow{ display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center; }
+  .arow .an{ font-size:13.5px;font-weight:600;color:var(--ink); }
+  .arow .av{ font-size:12.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums; }
+  .arow .abar{ grid-column:1 / -1;height:7px;border-radius:99px;background:var(--line);overflow:hidden; }
+  .arow .abar i{ display:block;height:100%;border-radius:99px;transition:width .9s cubic-bezier(.22,1,.36,1); }
+
+  /* detailed scorecard — 13 factors, the "receipts" */
+  .scorecard{
+    margin:6px 0 4px;padding:4px 18px 4px;
+    border:1px solid var(--line-soft);border-radius:var(--radius-sm);background:#FBFDFC;
+  }
+  .scgrid-head, .scrow{
+    display:grid;grid-template-columns:1fr 64px 28px;align-items:center;gap:10px;
+  }
+  .scgrid-head{
+    padding:12px 4px 9px;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line-soft);
+  }
+  .scrow{ padding:10px 4px;border-bottom:1px solid var(--line-soft); }
+  .scrow:last-child{ border-bottom:none; }
+  .sf{ display:flex;flex-direction:column;gap:3px;min-width:0; }
+  .sfname{ font-size:13.5px;font-weight:600;color:var(--ink); }
+  .sftag{ font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted); }
+  .sftag.documented{ color:var(--teal); }
+  .ss{ font-size:13.5px;font-weight:700;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums; }
+  .ss .sd{ font-weight:500;color:var(--muted); }
+  .sst{ display:flex;justify-content:center; }
+  .sst.ok{ color:var(--teal-bright); }
+  .sst.warn{ color:var(--amber); }
+  .sst.bad{ color:#C0492F; }
+
+  /* section heading inside report */
+  .rsec{
+    font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em;
+    margin:30px 0 4px;
+  }
+  .rsec + .rsecsub{ font-size:13.5px;color:var(--muted);margin:0 0 14px; }
+
+  /* confidence + dynamic pricing callouts */
+  .callout{
+    display:flex;gap:12px;align-items:flex-start;
+    border-radius:var(--radius-sm);padding:15px 17px;margin:14px 0;
+    font-size:14px;line-height:1.5;
+  }
+  .callout svg{flex:none;margin-top:2px;}
+  .callout.info{ background:#FBF4E9;border:1px solid #EBD7B3;color:#6B4E1E; }
+  .callout.info svg{color:var(--amber);}
+  .callout.tip{ background:var(--teal-wash);border:1px solid #BFE0D6;color:#0d5848; }
+  .callout.tip svg{color:var(--teal);}
+  .callout b{font-weight:700;}
+
+  /* quick wins: highest impact, lowest effort */
+  .qwblock{ margin:22px 0 8px; }
+  .qwblock .qwh{
+    font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;
+    margin:0 0 3px;display:flex;align-items:center;gap:8px;
+  }
+  .qwblock .qwh svg{ color:var(--teal); }
+  .qwblock .qwsub{ font-size:13.5px;color:var(--muted);margin:0 0 13px; }
+  .qwcard{
+    display:flex;align-items:center;gap:13px;
+    border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:13px 15px;margin-bottom:9px;background:var(--surface);
+  }
+  .qwcard .qwnum{
+    flex:none;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;
+    font-size:12px;font-weight:700;display:grid;place-items:center;
+  }
+  .qwcard .qwbody{ flex:1;min-width:0; }
+  .qwcard .qwt{ font-size:14.5px;font-weight:700;color:var(--ink);margin:0 0 3px;line-height:1.3; }
+  .qwcard .qwa{ font-size:13px;color:var(--muted);margin:0;line-height:1.45; }
+  .qwcard .qweffort{
+    flex:none;font-size:11px;font-weight:700;color:var(--teal);white-space:nowrap;
+  }
+  @media(max-width:480px){ .qwcard .qweffort{ display:none; } }
+
+  /* fix list */
+  .fixlist{ display:flex;flex-direction:column;gap:12px;margin-top:4px; }
+  .fixcard{
+    border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius-sm);
+    padding:15px 17px;background:var(--surface);
+  }
+  .fixcard.high{ border-left-color:#C0492F; }
+  .fixcard.med{  border-left-color:var(--amber); }
+  .fixcard.low{  border-left-color:var(--teal-bright); }
+  .fixhead{ display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:7px; }
+  .prio{
+    font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    padding:3px 8px;border-radius:6px;
+  }
+  .prio.high{ background:#FBE9E4;color:#A53B23; }
+  .prio.med{  background:#FBF1E2;color:#8A560F; }
+  .prio.low{  background:var(--teal-wash);color:#0d5848; }
+  .fixarea{ font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted); }
+  .evtag{
+    font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+    padding:2.5px 7px;border-radius:5px;
+  }
+  .evtag.documented{ background:var(--teal-wash);color:var(--teal); }
+  .evtag.practice{ background:#F1F1EE;color:var(--muted); }
+  .efftag{
+    font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;white-space:nowrap;
+  }
+  .fixcard .ft{ font-size:15.5px;font-weight:700;color:var(--ink);margin:0 0 6px;line-height:1.3; }
+  .fixcard .fa{ font-size:14.5px;color:var(--ink);margin:0 0 8px;line-height:1.5; }
+  .fixcard .fi{ font-size:13px;color:var(--muted);margin:0;line-height:1.45; }
+  .fixcard .fi b{ color:var(--teal);font-weight:700; }
+
+  .limits{
+    margin-top:26px;padding-top:18px;border-top:1px solid var(--line-soft);
+    font-size:13px;color:var(--muted);line-height:1.55;
+  }
+  .limits b{ color:var(--ink); }
+  .flagship{
+    margin-top:16px;padding:16px 18px;border-radius:var(--radius-sm);
+    background:var(--ink);color:#fff;font-size:14.5px;line-height:1.5;
+  }
+  .flagship b{ color:#fff; }
+  .flagship .fl-k{ font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-bright);display:block;margin-bottom:5px; }
+
+  /* ---------- Start screen: optional revenue inputs ---------- */
+  .revfields{ margin:0 0 26px;max-width:430px; }
+  .revrow{ display:flex;gap:12px;margin-top:7px; }
+  .revcell{ display:flex;flex-direction:column;gap:6px;flex:1;min-width:0; }
+  .revcap{ font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em; }
+  .revwrap{
+    display:flex;align-items:center;background:var(--surface);
+    border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:0 12px;
+    transition:border-color .16s, box-shadow .16s;
+  }
+  .revwrap:focus-within{ border-color:var(--teal-bright);box-shadow:0 0 0 3px rgba(21,163,140,.18); }
+  .revcur{ font-size:15px;color:var(--muted);font-weight:600;margin-right:2px; }
+  .revwrap input{
+    width:100%;border:none;outline:none;background:transparent;
+    font-family:inherit;font-size:15px;color:var(--ink);padding:12px 0;
+  }
+  .revwrap input::placeholder{ color:#9AA9A4; }
+
+  /* ---------- Report: health ladder (the signature) ---------- */
+  .ladder{
+    margin:8px 0 22px;padding:20px 18px 16px;
+    border:1px solid var(--line-soft);border-radius:var(--radius-sm);background:#FBFDFC;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .ladtrack{ position:relative;height:12px;border-radius:99px;background:var(--line);margin:6px 8px 0; }
+  .ladzone{ position:absolute;top:0;bottom:0; }
+  .ladzone.z-crit{  left:0;   width:50%;background:rgba(192,73,47,.13);border-radius:99px 0 0 99px; }
+  .ladzone.z-below{ left:50%; width:20%;background:rgba(185,116,26,.15); }
+  .ladzone.z-solid{ left:70%; width:15%;background:rgba(14,124,107,.16); }
+  .ladzone.z-exc{   left:85%; width:15%;background:rgba(21,163,140,.22);border-radius:0 99px 99px 0; }
+  .ladhead{ position:absolute;top:0;bottom:0;background:rgba(21,163,140,.30);border-radius:99px; }
+  .ladfill{ position:absolute;left:0;top:0;bottom:0;border-radius:99px; }
+  .ladtick{ position:absolute;top:-4px;bottom:-4px;width:2px;transform:translateX(-1px);background:rgba(21,32,43,.30);border-radius:2px; }
+  .ladmark{
+    position:absolute;top:50%;transform:translate(-50%,-50%);border-radius:50%;
+    background:#fff;box-shadow:0 1px 4px rgba(21,32,43,.28);
+  }
+  .ladmark.you{ width:16px;height:16px;border:3px solid var(--ink);z-index:3; }
+  .ladmark.goal{ width:14px;height:14px;border:2px dashed var(--teal);z-index:2; }
+  .ladscale{ position:relative;height:15px;margin:10px 8px 0; }
+  .ladtl{ position:absolute;transform:translateX(-50%);font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);white-space:nowrap; }
+  .ladlegend{ display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:15px; }
+  .ll{ display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink); }
+  .ll.muted{ color:var(--muted); }
+  .ll b{ font-weight:700; }
+  .lldot{ width:10px;height:10px;border-radius:50%;flex:none; }
+  .lldot.ghost{ background:#fff;border:2px dashed var(--teal);box-sizing:border-box; }
+  .ll.milestones{ flex-basis:100%;color:var(--muted);font-size:12px;margin-top:1px; }
+  .ll.milestones b{ color:var(--ink);font-weight:700; }
+  @media(max-width:480px){ .ladtl{ font-size:9.5px; } }
+
+  /* ---------- Report: revenue-at-stake card ---------- */
+  .revcard{
+    margin:0 0 22px;padding:18px 20px 16px;
+    border:1px solid #BFE0D6;border-radius:var(--radius-sm);
+    background:linear-gradient(135deg,var(--teal-wash),#fff);
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .revcard-k{
+    display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;
+  }
+  .revbig{
+    font-family:var(--display);font-weight:700;font-size:clamp(26px,5.5vw,34px);
+    letter-spacing:-.02em;color:var(--ink);margin:2px 0 8px;line-height:1.05;font-variant-numeric:tabular-nums;
+  }
+  .revper{ font-family:var(--body);font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0; }
+  .revsub{ font-size:14px;color:var(--ink);margin:0 0 14px;line-height:1.5;max-width:54ch; }
+  .revsub b{ font-weight:700; }
+  .revnote{ color:var(--muted); }
+  .revcalc-row{ display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end; }
+  .revcalc-row .revcell{ flex:1 1 140px; }
+  .revgo{ flex:none;padding:12px 18px; }
+  .revhint{ font-size:12.5px;color:var(--amber);font-weight:600;margin:9px 0 0; }
+  .revhint:empty{ display:none; }
+  .revdisc{ font-size:11.5px;color:var(--muted);margin:11px 0 0;line-height:1.45;max-width:56ch; }
+
+  /* print: clean, single-column, no chrome */
+  @media print{
+    body{ background:#fff !important; }
+    #app{ max-width:none;padding:0; }
+    .topbar, .sections, .nav, .printhide{ display:none !important; }
+    .revcalc-row, .revhint{ display:none !important; }
+    .stage{ box-shadow:none;border:none;padding:0; }
+    .fixcard, .areas, .scorecard, .scrow, .callout, .headline, .qwblock, .qwcard, .flagship, .ladder, .revcard{ break-inside:avoid; }
+    .flagship{ background:#fff;color:var(--ink);border:1px solid var(--line); }
+    .flagship .fl-k{ color:var(--teal); }
+    *{ animation:none !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   DATA — the 17 audit questions (text from the W2/3 spec)
+   ============================================================ */
+const SECTIONS = [
+  { id:'photos',    short:'Photos',   title:'Photos' },
+  { id:'copy',      short:'Copy',     title:'Listing copy' },
+  { id:'reviews',   short:'Reviews',  title:'Reviews & ratings' },
+  { id:'settings',  short:'Settings', title:'Settings & visibility' },
+  { id:'pricing',   short:'Pricing',  title:'Pricing' },
+  { id:'amenities', short:'Extras',   title:'Amenities & activity' },
+];
+
+const QUESTIONS = [
+  { id:'q1', section:'photos', type:'single',
+    prompt:'How many photos does your listing currently have?',
+    options:[
+      {value:'lt10',  label:'Fewer than 10'},
+      {value:'10-14', label:'10–14'},
+      {value:'15-19', label:'15–19'},
+      {value:'20-24', label:'20–24'},
+      {value:'25+',   label:'25 or more'},
+    ]},
+  { id:'q2', section:'photos', type:'multi',
+    prompt:'Does your photo set include all of the following?',
+    help:'Select everything your photos already cover.',
+    options:[
+      {value:'exterior',      label:'Exterior (building, entrance, or street view)'},
+      {value:'natural_light', label:'Shots taken in natural light'},
+      {value:'bedrooms',      label:'Every bedroom'},
+      {value:'bathrooms',     label:'Bathroom(s)'},
+      {value:'kitchen',       label:'Kitchen'},
+      {value:'living',        label:'Living or common area'},
+    ]},
+  { id:'q3', section:'photos', type:'single',
+    prompt:"What is your listing's cover photo?",
+    help:'The first image guests see in search results.',
+    options:[
+      {value:'bedroom',  label:'Best bedroom'},
+      {value:'living',   label:'Living room'},
+      {value:'kitchen',  label:'Kitchen'},
+      {value:'exterior', label:'Exterior — building'},
+      {value:'pool',     label:'Pool or outdoor space'},
+      {value:'other',    label:'Other interior'},
+    ]},
+
+  { id:'q4', section:'copy', type:'single',
+    prompt:'Does your listing title include at least one specific, descriptive detail — a location, standout feature, or property type?',
+    help:'For example: “Oceanfront,” “Walk to Downtown,” “Private Pool,” “2BR Loft.”',
+    options:[
+      {value:'yes',     label:'Yes'},
+      {value:'generic', label:"Not really — it's fairly generic"},
+      {value:'no',      label:'No'},
+    ]},
+  { id:'q5', section:'copy', type:'single',
+    prompt:'How accurately do your photos, title, and description reflect what guests actually experience when they arrive?',
+    options:[
+      {value:'very',   label:'Very accurately'},
+      {value:'mostly', label:'Mostly accurate — some minor differences'},
+      {value:'gap',    label:"There's a noticeable gap"},
+    ]},
+
+  { id:'q6', section:'reviews', type:'single',
+    prompt:'What is your current overall star rating on Airbnb?',
+    options:[
+      {value:'new',       label:'Not yet rated'},
+      {value:'lt4.5',     label:'Below 4.5'},
+      {value:'4.5-4.69',  label:'4.5 – 4.69'},
+      {value:'4.7-4.79',  label:'4.7 – 4.79'},
+      {value:'4.8-4.89',  label:'4.8 – 4.89'},
+      {value:'4.9-5',     label:'4.9 – 5.0'},
+    ]},
+  { id:'q7', section:'reviews', type:'single',
+    prompt:'How many reviews does your listing currently have?',
+    options:[
+      {value:'0',     label:'0'},
+      {value:'1-4',   label:'1–4'},
+      {value:'5-9',   label:'5–9'},
+      {value:'10-24', label:'10–24'},
+      {value:'25-49', label:'25–49'},
+      {value:'50+',   label:'50 or more'},
+    ]},
+  { id:'q8', section:'reviews', type:'multi',
+    prompt:'In your Airbnb host dashboard, do any of your category ratings fall below 4.8?',
+    help:'Select all that apply.',
+    options:[
+      {value:'cleanliness',   label:'Cleanliness'},
+      {value:'accuracy',      label:'Accuracy'},
+      {value:'communication', label:'Communication'},
+      {value:'location',      label:'Location'},
+      {value:'checkin',       label:'Check-in'},
+      {value:'value',         label:'Value'},
+      {value:'none',          label:'None below 4.8',  exclusive:true},
+      {value:'unknown',       label:"I haven't checked", exclusive:true},
+    ]},
+
+  { id:'q9', section:'settings', type:'single',
+    prompt:'On average, how quickly do you respond to new messages or booking requests?',
+    options:[
+      {value:'1h',    label:'Within 1 hour'},
+      {value:'1-6h',  label:'1–6 hours'},
+      {value:'6-24h', label:'6–24 hours'},
+      {value:'24h+',  label:'More than 24 hours'},
+      {value:'unknown', label:"I'm not sure"},
+    ]},
+  { id:'q10', section:'settings', type:'yesno',
+    prompt:'Is Instant Book currently enabled on your listing?',
+    options:[{value:'yes',label:'Yes'},{value:'no',label:'No'}]},
+  { id:'q11', section:'settings', type:'single',
+    prompt:'What cancellation policy does your listing currently use?',
+    options:[
+      {value:'flexible',     label:'Flexible'},
+      {value:'moderate',     label:'Moderate'},
+      {value:'firm',         label:'Firm'},
+      {value:'strict',       label:'Strict'},
+      {value:'super_strict', label:'Super Strict'},
+    ]},
+  { id:'q12', section:'settings', type:'single',
+    prompt:'What is your current minimum stay requirement?',
+    options:[
+      {value:'1',   label:'1 night'},
+      {value:'2',   label:'2 nights'},
+      {value:'3-4', label:'3–4 nights'},
+      {value:'5+',  label:'5 or more nights'},
+    ]},
+
+  { id:'q13', section:'pricing', type:'single',
+    prompt:'Have you compared your total price — nightly rate plus cleaning fee — against similar listings nearby? If so, how do you compare?',
+    options:[
+      {value:'lower',   label:'Clearly lower'},
+      {value:'in_line', label:'Roughly in line'},
+      {value:'higher',  label:'Higher'},
+      {value:'never',   label:"I've never checked"},
+    ]},
+  { id:'q14', section:'pricing', type:'single',
+    prompt:"Is your cleaning fee higher than a single night's rate?",
+    options:[
+      {value:'yes',  label:'Yes'},
+      {value:'no',   label:'No'},
+      {value:'none', label:"I don't charge a cleaning fee"},
+    ]},
+
+  { id:'q15', section:'amenities', type:'multi',
+    prompt:'Which of these amenities does your listing offer?',
+    help:'Select all that apply.',
+    options:[
+      {value:'wifi',        label:'Wi-Fi (verified or known speed)'},
+      {value:'self_checkin',label:'Self check-in (smart lock, lockbox, keypad)'},
+      {value:'kitchen',     label:'Kitchen or kitchenette'},
+      {value:'laundry',     label:'Washer and/or dryer'},
+      {value:'climate',     label:'Air conditioning (or heating)'},
+      {value:'parking',     label:'Free parking on premises or nearby'},
+    ]},
+  { id:'q16', section:'amenities', type:'single',
+    prompt:'In the last 30 days, have you updated your listing — prices, photos, description, or calendar?',
+    options:[
+      {value:'weekly', label:'Yes — regularly (about weekly or more)'},
+      {value:'few',    label:'Yes — one or two updates'},
+      {value:'none',   label:'No — not in over a month'},
+    ]},
+  { id:'q17', section:'amenities', type:'single',
+    prompt:'Does your welcome or check-in message explain how Airbnb star ratings work — and invite guests to reach out before they review, if anything is off?',
+    options:[
+      {value:'yes',     label:'Yes — I explain and invite feedback'},
+      {value:'mention', label:"I mention ratings, but don't invite feedback"},
+      {value:'no',      label:'No'},
+    ]},
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  screen: 'start',     // 'start' | 'question' | 'review' | 'report'
+  index: 0,            // current question index
+  answers: {},         // { q1:'value', q2:['a','b'], ... }
+  listingName: '',     // optional, set on start screen — personalizes the report
+  nightlyRate: null,   // optional number — unlocks the revenue-at-stake estimate
+  nightsPerMonth: null,// optional number — booked nights/month; defaults conservatively
+};
+
+const app = document.getElementById('app');
+
+/* ---------- small helpers ---------- */
+function secIndex(secId){ return SECTIONS.findIndex(s => s.id === secId); }
+function questionsInSection(secId){ return QUESTIONS.filter(q => q.section === secId); }
+
+function isAnswered(q){
+  const a = state.answers[q.id];
+  if (q.type === 'multi') return Array.isArray(a) && a.length > 0;
+  return a !== undefined && a !== null && a !== '';
+}
+
+function labelFor(q, value){
+  const o = q.options.find(o => o.value === value);
+  return o ? o.label : value;
+}
+function answerText(q){
+  const a = state.answers[q.id];
+  if (a === undefined) return '—';
+  if (q.type === 'multi'){
+    if (!a.length) return 'None selected';
+    return a.map(v => labelFor(q, v)).join(', ');
+  }
+  return labelFor(q, a);
+}
+
+// Escapes the one piece of free-text the user can type (listing name) before
+// it goes into innerHTML or an attribute.
+function escapeHTML(str){
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function reportDate(){
+  return new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+}
+
+// Parse a user-typed number (rate / nights). Strips currency symbols, spaces and
+// thousands separators, then validates against a sane range. Returns null on
+// anything we can't trust — empty, non-numeric, or out of bounds — so callers
+// can fall back gracefully instead of rendering a garbage figure.
+function parseNum(v, min, max){
+  if (v === null || v === undefined) return null;
+  const cleaned = String(v).replace(/[,\s]/g, '').replace(/[^0-9.]/g, '');
+  if (cleaned === '' || cleaned === '.') return null;
+  const n = parseFloat(cleaned);
+  if (!isFinite(n) || n < min || n > max) return null;
+  return n;
+}
+
+// Whole-dollar formatting for the revenue estimate. USD is the product's pricing
+// currency; a host can read it as their own currency at roughly 1:1.
+const fmtUSD = new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 });
+function money(n){ return fmtUSD.format(Math.round(n)); }
+
+/* ============================================================
+   ICONS
+   ============================================================ */
+const I = {
+  check: '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.8L5 9.7L11 3.3" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  arrow: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h9M8.5 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  back:  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 8H4M7.5 12l-4-4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  clock: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.8V8l2.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  lock:  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3.2" y="7" width="9.6" height="6.6" rx="1.6" stroke="currentColor" stroke-width="1.5"/><path d="M5.4 7V5.2a2.6 2.6 0 015.2 0V7" stroke="currentColor" stroke-width="1.5"/></svg>',
+  spark: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.6 4.9L14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8l4.9-1.6L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  build: '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11.5 2.5l4 4M2.5 15.5l1-3.5 7-7 2.5 2.5-7 7-3.5 1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  logo:  '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 7.2L4.4 9.4 10 3.2" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  list:  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.5 4.5h7M5.5 8h7M5.5 11.5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="2.6" cy="4.5" r="1" fill="currentColor"/><circle cx="2.6" cy="8" r="1" fill="currentColor"/><circle cx="2.6" cy="11.5" r="1" fill="currentColor"/></svg>',
+  print: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4.5 6V2.5h7V6M4.5 12H3a1 1 0 01-1-1V7.5a1 1 0 011-1h10a1 1 0 011 1V11a1 1 0 01-1 1h-1.5M4.5 10h7v3.5h-7V10z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  info:  '<svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.2v4M8 5.1v.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  tip:   '<svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 1.6a4.4 4.4 0 00-2.6 7.95c.5.37.8.78.85 1.25l.1.95h3.3l.1-.95c.05-.47.35-.88.85-1.25A4.4 4.4 0 008 1.6zM6.4 13.7h3.2M6.9 12h2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  scOk:   '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.4" stroke="currentColor" stroke-width="1.4"/><path d="M4.7 7.7l1.9 1.9 3.6-4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  scWarn: '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2.3L13 12.2H2L7.5 2.3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M7.5 6.3v3M7.5 10.5v.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  scBad:  '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.4" stroke="currentColor" stroke-width="1.4"/><path d="M5.3 5.3l4.4 4.4M9.7 5.3l-4.4 4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+};
+
+/* ============================================================
+   PROGRESS BAR (6 sections)
+   ============================================================ */
+function progressHTML(){
+  // how many questions answered, overall %
+  const answered = QUESTIONS.filter(isAnswered).length;
+  const pct = state.screen === 'review' ? 100 : Math.round((answered / QUESTIONS.length) * 100);
+  const currentSec = state.screen === 'question' ? QUESTIONS[state.index].section : null;
+
+  const segs = SECTIONS.map(s => {
+    const qs = questionsInSection(s.id);
+    const done = qs.filter(isAnswered).length;
+    const frac = done / qs.length;
+    const isActive = s.id === currentSec;
+    let cls = 'seg';
+    if (frac >= 1) cls += ' done';
+    if (isActive) cls += ' active';
+    return `<div class="${cls}">
+      <div class="bar"><i style="width:${Math.round(frac*100)}%"></i></div>
+      <div class="lbl">${s.short}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="topbar">
+      <div class="brand">
+        <span class="mark">${I.logo}</span>
+        <span>Listing Health Audit</span>
+      </div>
+      <span class="pct">${pct}%</span>
+    </div>
+    <div class="sections">${segs}</div>`;
+}
+
+/* ============================================================
+   RENDER: START
+   ============================================================ */
+function renderStart(){
+  app.innerHTML = `
+    <div class="stage fade">
+      <div class="hero">
+        <span class="kicker">${I.spark} For Airbnb &amp; short-term rental hosts</span>
+        <h1>Find out what's quietly <em>costing you bookings</em>.</h1>
+        <p>Answer 17 quick questions about your listing. In about two minutes you'll
+           see exactly what's working — and what to fix first.</p>
+        <div class="meta">
+          <span class="m">${I.clock} ~2 minutes</span>
+          <span class="m">${I.list} 17 questions</span>
+          <span class="m">${I.lock} Stays on your device</span>
+        </div>
+        <label class="nameField" for="listingNameInput">
+          <span class="nameLbl">Your listing's name <em>(optional — personalizes your report)</em></span>
+          <input type="text" id="listingNameInput" maxlength="60" placeholder="e.g. Cliffside Cottage" value="${escapeHTML(state.listingName || '')}">
+        </label>
+        <div class="revfields">
+          <span class="nameLbl">Your numbers <em>(optional — adds a revenue estimate to your report)</em></span>
+          <div class="revrow">
+            <label class="revcell" for="rateInput">
+              <span class="revcap">Avg. nightly rate</span>
+              <span class="revwrap"><span class="revcur">$</span><input type="text" inputmode="decimal" id="rateInput" maxlength="9" placeholder="120" value="${state.nightlyRate != null ? state.nightlyRate : ''}"></span>
+            </label>
+            <label class="revcell" for="nightsInput">
+              <span class="revcap">Booked nights / month</span>
+              <span class="revwrap"><input type="text" inputmode="numeric" id="nightsInput" maxlength="2" placeholder="12" value="${state.nightsPerMonth != null ? state.nightsPerMonth : ''}"></span>
+            </label>
+          </div>
+        </div>
+        <div class="start-cta">
+          <button class="btn btn-primary" id="startBtn">Start the audit ${I.arrow}</button>
+          <span class="note">No sign-up. No email required.</span>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('startBtn').addEventListener('click', () => {
+    const inp = document.getElementById('listingNameInput');
+    state.listingName = inp ? inp.value.trim().slice(0, 60) : '';
+    const rateEl = document.getElementById('rateInput');
+    const nightsEl = document.getElementById('nightsInput');
+    state.nightlyRate = rateEl ? parseNum(rateEl.value, 1, 100000) : null;
+    state.nightsPerMonth = nightsEl ? parseNum(nightsEl.value, 1, 31) : null;
+    state.screen = 'question';
+    state.index = 0;
+    render();
+  });
+}
+
+/* ============================================================
+   RENDER: QUESTION
+   ============================================================ */
+function renderQuestion(){
+  const q = QUESTIONS[state.index];
+  const sec = SECTIONS[secIndex(q.section)];
+  const qsInSec = questionsInSection(q.section);
+  const posInSec = qsInSec.findIndex(x => x.id === q.id) + 1;
+  const isLast = state.index === QUESTIONS.length - 1;
+  const a = state.answers[q.id];
+
+  // build options
+  let prevExclusive = false;
+  const optsHTML = q.options.map(o => {
+    let selected;
+    if (q.type === 'multi') selected = Array.isArray(a) && a.includes(o.value);
+    else selected = a === o.value;
+    const multiCls = q.type === 'multi' ? ' multi' : '';
+    const sep = (o.exclusive && !prevExclusive) ? '<div class="exsep"></div>' : '';
+    prevExclusive = !!o.exclusive;
+    return `${sep}<button type="button" class="opt${multiCls}${selected?' sel':''}"
+        role="${q.type==='multi'?'checkbox':'radio'}" aria-checked="${selected}"
+        data-value="${o.value}"${o.exclusive?' data-exclusive="1"':''}>
+        <span class="tick">${I.check}</span>
+        <span class="txt">${o.label}</span>
+      </button>`;
+  }).join('');
+
+  const selNote = q.type === 'multi'
+    ? `<span class="selnote">${(Array.isArray(a)?a.length:0)} selected${q.type==='multi'?' · pick all that apply':''}</span>`
+    : `<span class="selnote">Question ${state.index+1} of ${QUESTIONS.length}</span>`;
+
+  app.innerHTML = progressHTML() + `
+    <div class="stage fade">
+      <span class="eyebrow">
+        <span class="dot"></span>${sec.title}
+        <span class="count">· ${posInSec} of ${qsInSec.length}</span>
+      </span>
+      <h1 class="q" tabindex="-1">${q.prompt}</h1>
+      <p class="help">${q.help || ''}</p>
+      <div class="opts" role="${q.type==='multi'?'group':'radiogroup'}" aria-label="${q.prompt}">
+        ${optsHTML}
+      </div>
+      <div class="nav">
+        <button class="btn btn-ghost" id="backBtn">${I.back} Back</button>
+        ${selNote}
+        <button class="btn btn-primary" id="nextBtn" ${isAnswered(q)?'':'disabled'}>
+          ${isLast ? 'Review answers' : 'Continue'} ${I.arrow}
+        </button>
+      </div>
+    </div>`;
+
+  // focus the question for screen readers / keyboard users
+  const heading = app.querySelector('h1.q');
+  if (heading) heading.focus();
+
+  // option clicks
+  app.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => selectOption(q, btn.dataset.value, btn.dataset.exclusive === '1'));
+  });
+
+  document.getElementById('backBtn').addEventListener('click', goBack);
+  document.getElementById('nextBtn').addEventListener('click', goNext);
+}
+
+function selectOption(q, value, isExclusive){
+  if (q.type === 'multi'){
+    let arr = Array.isArray(state.answers[q.id]) ? state.answers[q.id].slice() : [];
+    if (isExclusive){
+      // exclusive options replace everything
+      arr = arr.includes(value) ? [] : [value];
+    } else {
+      // a normal pick clears any exclusive option, then toggles
+      const exclusiveValues = q.options.filter(o => o.exclusive).map(o => o.value);
+      arr = arr.filter(v => !exclusiveValues.includes(v));
+      if (arr.includes(value)) arr = arr.filter(v => v !== value);
+      else arr.push(value);
+    }
+    state.answers[q.id] = arr;
+    paintSelection(q); // surgical update — no rebuild, no scroll jump
+  } else {
+    // single / yesno: pick, then auto-advance for momentum
+    const changed = state.answers[q.id] !== value;
+    state.answers[q.id] = value;
+    paintSelection(q); // show the choice instantly, in place
+    if (changed && state.index < QUESTIONS.length - 1){
+      setTimeout(goNext, 180); // goNext re-renders the NEXT question (scroll is correct there)
+    }
+  }
+}
+
+/* Update ticks, counter and the Continue button WITHOUT rebuilding the card.
+   This is what kills the "page jumps to top on every tap" bug: a multi-select
+   tap no longer triggers a full re-render. */
+function paintSelection(q){
+  const a = state.answers[q.id];
+  app.querySelectorAll('.opt').forEach(btn => {
+    let sel;
+    if (q.type === 'multi') sel = Array.isArray(a) && a.includes(btn.dataset.value);
+    else sel = a === btn.dataset.value;
+    btn.classList.toggle('sel', sel);
+    btn.setAttribute('aria-checked', sel ? 'true' : 'false');
+  });
+  if (q.type === 'multi'){
+    const note = app.querySelector('.selnote');
+    if (note){
+      const n = Array.isArray(a) ? a.length : 0;
+      note.textContent = `${n} selected · pick all that apply`;
+    }
+  }
+  const next = document.getElementById('nextBtn');
+  if (next) next.disabled = !isAnswered(q);
+}
+
+function goNext(){
+  const q = QUESTIONS[state.index];
+  if (!isAnswered(q)) return;
+  if (state.index < QUESTIONS.length - 1){
+    state.index++;
+    render();
+  } else {
+    state.screen = 'review';
+    render();
+  }
+}
+
+function goBack(){
+  if (state.index > 0){
+    state.index--;
+    render();
+  } else {
+    state.screen = 'start';
+    render();
+  }
+}
+
+/* ============================================================
+   RENDER: REVIEW  (today's end-point; report plugs in here Fri)
+   ============================================================ */
+function renderReview(){
+  const groups = SECTIONS.map(s => {
+    const rows = questionsInSection(s.id).map(q => {
+      const idx = QUESTIONS.findIndex(x => x.id === q.id);
+      return `<button class="ritem" data-idx="${idx}">
+          <span class="qq">${q.prompt}</span>
+          <span class="aa">${answerText(q)}<span class="edit">Edit</span></span>
+        </button>`;
+    }).join('');
+    return `<div class="rgroup">
+        <div class="gh">${s.title}</div>
+        ${rows}
+      </div>`;
+  }).join('');
+
+  app.innerHTML = progressHTML() + `
+    <div class="stage fade review">
+      <h1>Review your answers.</h1>
+      <p class="sub">Here's everything you told us. Tap any answer to change it —
+         then get your Listing Health Score and your prioritized fixes.</p>
+
+      <div style="margin-top:6px">${groups}</div>
+
+      <div class="nav">
+        <button class="btn btn-ghost" id="backBtn">${I.back} Back to last question</button>
+        <button class="btn btn-teal" id="scoreBtn">Get my score ${I.arrow}</button>
+      </div>
+    </div>`;
+
+  app.querySelectorAll('.ritem').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.index = parseInt(btn.dataset.idx, 10);
+      state.screen = 'question';
+      render();
+    });
+  });
+  document.getElementById('backBtn').addEventListener('click', () => {
+    state.screen = 'question';
+    state.index = QUESTIONS.length - 1;
+    render();
+  });
+  document.getElementById('scoreBtn').addEventListener('click', () => {
+    state.screen = 'report';
+    render();
+  });
+}
+
+/* ============================================================
+   SCORING ENGINE  (logic from the W2/3 spec, Part 2)
+   ============================================================ */
+
+// Max points each question can earn (sums to 100).
+const MAX = { q1:8,q2:5,q3:8,q4:4,q5:4,q6:14,q7:10,q8:6,q9:11,q10:3,q11:2,q12:2,q13:6,q14:3,q15:7,q16:3,q17:4 };
+
+// The 3 review-history factors excluded in New Listing Mode (= 30 pts).
+const NLM_EXCLUDE = ['q6','q7','q8'];
+
+// Low-confidence trigger (residual open Q#3 from the spec): with only 3 possible
+// "not sure" answers, requiring 3 would almost never fire — 2 is the practical bar.
+const LOW_CONF_THRESHOLD = 2;
+
+// The 13 weighted factors from the W2/3 spec (Part 2.1), in spec weight order.
+// Used to render the scorecard table and to derive the "Documented / Best
+// practice" badge on each fix (so we don't tag evidence by hand at 30 call sites).
+const FACTORS = [
+  { key:'rating',    label:'Overall rating',          evidence:'documented', q:['q6'] },
+  { key:'photos',    label:'Photo set',                evidence:'practice',   q:['q1','q2'] },
+  { key:'response',  label:'Response time',            evidence:'documented', q:['q9'] },
+  { key:'reviewcnt', label:'Review count',             evidence:'documented', q:['q7'] },
+  { key:'price',     label:'Price positioning',        evidence:'documented', q:['q13','q14'] },
+  { key:'cover',     label:'Cover photo',              evidence:'practice',   q:['q3'] },
+  { key:'copy',      label:'Listing copy',             evidence:'practice',   q:['q4','q5'] },
+  { key:'amenities', label:'Amenities',                evidence:'documented', q:['q15'] },
+  { key:'category',  label:'Category ratings',         evidence:'practice',   q:['q8'] },
+  { key:'platform',  label:'Platform settings',        evidence:'documented', q:['q10','q11'] },
+  { key:'comms',     label:'Guest communication',      evidence:'practice',   q:['q17'] },
+  { key:'activity',  label:'Activity / recency',       evidence:'practice',   q:['q16'] },
+  { key:'flex',      label:'Flexibility & incentives', evidence:'practice',   q:['q12'] },
+];
+// q-id → owning factor, for instant lookup from a fix's question reference.
+const Q_TO_FACTOR = {};
+FACTORS.forEach(f => f.q.forEach(qk => { Q_TO_FACTOR[qk] = f; }));
+
+// Effort tiers shown on every fix card — turns a list of problems into a plan.
+const EFFORT_META = {
+  quick:   { label:'Quick',  hint:'~15 min' },
+  medium:  { label:'Medium', hint:'~30–60 min' },
+  project: { label:'Bigger project', hint:'half a day, or ongoing' },
+};
+
+// Factor → macro-area, for the breakdown + interpretation (spec 2.2).
+const AREAS = [
+  { key:'conversion', label:'Conversion',           color:'var(--teal)',        q:['q1','q2','q3','q4','q5','q13','q14'] },
+  { key:'reviews',    label:'Reviews & trust',       color:'var(--teal-bright)', q:['q6','q7','q8','q17'] },
+  { key:'ranking',    label:'Ranking & visibility',  color:'var(--amber)',       q:['q9','q15','q10','q11','q16','q12'] },
+];
+
+// Friendly names for the interpretation sentence (grouped by factor).
+const GROUPS = [
+  { name:'your photos',          q:['q1','q2'] },
+  { name:'your cover photo',     q:['q3'] },
+  { name:'your listing copy',    q:['q4','q5'] },
+  { name:'your overall rating',  q:['q6'] },
+  { name:'your review count',    q:['q7'] },
+  { name:'your category ratings',q:['q8'] },
+  { name:'your response time',   q:['q9'] },
+  { name:'your booking settings',q:['q10','q11'] },
+  { name:'your minimum stay',    q:['q12'] },
+  { name:'your pricing',         q:['q13','q14'] },
+  { name:'your amenities',       q:['q15'] },
+  { name:'listing activity',     q:['q16'] },
+  { name:'review communication', q:['q17'] },
+];
+
+function pick(map, v){ return Object.prototype.hasOwnProperty.call(map, v) ? map[v] : 0; }
+
+// Per-question scorers — each returns points earned (decimals kept internally).
+function subScores(A){
+  const s = {};
+  s.q1 = pick({lt10:0,'10-14':3,'15-19':5,'20-24':8,'25+':8}, A.q1);
+
+  { // Q2: base 5, penalties for missing coverage
+    let p = 5; const set = Array.isArray(A.q2) ? A.q2 : [];
+    if (!set.includes('exterior')) p -= 2;
+    if (!set.includes('natural_light')) p -= 2;
+    ['bedrooms','bathrooms','kitchen','living'].forEach(r => { if (!set.includes(r)) p -= 0.5; });
+    s.q2 = Math.max(0, p);
+  }
+
+  s.q3 = pick({pool:8,living:7,exterior:6,bedroom:4,kitchen:4,other:3}, A.q3);
+  s.q4 = pick({yes:4,generic:2,no:0}, A.q4);
+  s.q5 = pick({very:4,mostly:2,gap:0}, A.q5);
+  s.q6 = pick({'4.9-5':14,'4.8-4.89':12,'4.7-4.79':9,'4.5-4.69':4,'lt4.5':0,'new':0}, A.q6);
+  s.q7 = pick({'50+':10,'25-49':10,'10-24':8,'5-9':6,'1-4':3,'0':0}, A.q7);
+
+  { // Q8: based on how many categories are below 4.8
+    const set = Array.isArray(A.q8) ? A.q8 : [];
+    if (set.includes('none')) s.q8 = 6;
+    else if (set.includes('unknown')) s.q8 = 2;
+    else {
+      const n = set.filter(v => v !== 'none' && v !== 'unknown').length;
+      s.q8 = n === 0 ? 6 : n === 1 ? 4 : n === 2 ? 2 : 0;
+    }
+  }
+
+  s.q9  = pick({'1h':11,'1-6h':8,'6-24h':4,'24h+':0,unknown:4}, A.q9);
+  s.q10 = pick({yes:3,no:0}, A.q10);
+  s.q11 = pick({flexible:2,moderate:2,firm:1,strict:0.5,super_strict:0}, A.q11);
+  s.q12 = pick({'1':2,'2':1.5,'3-4':1,'5+':0.5}, A.q12);
+  s.q13 = pick({in_line:6,lower:4,higher:2,never:2}, A.q13);
+  s.q14 = pick({no:3,none:3,yes:0}, A.q14);
+
+  { // Q15: sum of selected amenity weights
+    const w = {wifi:2,self_checkin:1.5,kitchen:1,climate:1,laundry:0.75,parking:0.75};
+    const set = Array.isArray(A.q15) ? A.q15 : [];
+    s.q15 = set.reduce((t,v) => t + (w[v] || 0), 0);
+  }
+
+  s.q16 = pick({weekly:3,few:2,none:0}, A.q16);
+  s.q17 = pick({yes:4,mention:2,no:0}, A.q17);
+  return s;
+}
+
+function bandFor(score){
+  if (score >= 85) return { key:'excellent', label:'Excellent', color:'var(--teal-bright)',
+    meaning:'A strong, well-optimized listing. Only minor refinements left.' };
+  if (score >= 70) return { key:'solid', label:'Solid', color:'var(--teal)',
+    meaning:'Good foundations, with a few levers still open. Real upside, but nothing urgent.' };
+  if (score >= 50) return { key:'below', label:'Below average', color:'var(--amber)',
+    meaning:'Several documented weak spots. Concrete work to do — and clear gains available.' };
+  return { key:'critical', label:'Critical', color:'#C0492F',
+    meaning:'Multiple structural problems. These are high-priority fixes.' };
+}
+
+function computeScore(){
+  const A = state.answers;
+  const newListing = (A.q6 === 'new') && (A.q7 === '0');
+  const s = subScores(A);
+
+  const keys = Object.keys(MAX);
+  const counted = newListing ? keys.filter(k => !NLM_EXCLUDE.includes(k)) : keys;
+  const earned = counted.reduce((t,k) => t + s[k], 0);
+  const denom  = newListing ? 70 : 100;
+  const score  = Math.round((earned / denom) * 100);
+
+  // area breakdown (skip excluded factors in NLM)
+  const areas = AREAS.map(area => {
+    const qs = area.q.filter(k => counted.includes(k));
+    const aMax = qs.reduce((t,k) => t + MAX[k], 0);
+    const aEarned = qs.reduce((t,k) => t + s[k], 0);
+    return { label:area.label, color:area.color, max:aMax,
+             earned:Math.round(aEarned), pct: aMax ? Math.round((aEarned/aMax)*100) : 0 };
+  }).filter(a => a.max > 0);
+
+  // weakest groups (most points lost) for the interpretation line
+  const weak = GROUPS.map(g => {
+    const qs = g.q.filter(k => counted.includes(k));
+    const lost = qs.reduce((t,k) => t + (MAX[k] - s[k]), 0);
+    return { name:g.name, lost };
+  }).filter(g => g.lost > 0.4).sort((a,b) => b.lost - a.lost);
+
+  // low-confidence: how many "I'm not sure / haven't checked" answers
+  const unsure =
+    ((Array.isArray(A.q8) && A.q8.includes('unknown')) ? 1 : 0) +
+    (A.q9 === 'unknown' ? 1 : 0) +
+    (A.q13 === 'never' ? 1 : 0);
+  const lowConfidence = unsure >= LOW_CONF_THRESHOLD;
+
+  return { score, band:bandFor(score), sub:s, newListing, areas, weak, lowConfidence, unsure,
+           earned, denom, counted };
+}
+
+/* ============================================================
+   PROJECTION + REVENUE  (turns the score into a destination)
+   ============================================================ */
+
+// Points a set of fixes could recover, counted ONCE per question (several fixes
+// can target the same question — e.g. three photo fixes all point at q2 — so we
+// dedupe by question to avoid inflating the projection). Only questions that
+// actually count toward the score are included, so New Listing Mode stays clean.
+function pointsRecoverable(fixList, r){
+  const seen = new Set();
+  let pts = 0;
+  fixList.forEach(fx => (fx.qkeys || []).forEach(qk => {
+    if (seen.has(qk) || !r.counted.includes(qk)) return;
+    seen.add(qk);
+    pts += (MAX[qk] || 0) - (r.sub[qk] || 0);
+  }));
+  return pts;
+}
+
+// Project the score if a set of fixes were fully resolved. Pure arithmetic on the
+// model's own weights — no invented numbers. Clamped to [current, 100].
+function projectScore(fixList, r){
+  const proj = Math.round(((r.earned + pointsRecoverable(fixList, r)) / r.denom) * 100);
+  return Math.max(r.score, Math.min(100, proj));
+}
+
+// Illustrative revenue-at-stake, built ENTIRELY from the host's own inputs and a
+// clearly-labeled, conservative uplift assumption tied to their current band. This
+// is a transparent model, not a measurement or a promise — the UI says so plainly.
+const UPLIFT_BANDS = {
+  critical:  [0.08, 0.15],
+  below:     [0.05, 0.10],
+  solid:     [0.02, 0.05],
+  excellent: [0.00, 0.02],
+};
+function revenueEstimate(r){
+  const rate = state.nightlyRate;
+  if (!rate) return null;
+  const assumedNights = state.nightsPerMonth == null;
+  const nights = state.nightsPerMonth || 12; // conservative default, stated in the UI
+  const annual = rate * nights * 12;
+  const [lo, hi] = UPLIFT_BANDS[r.band.key] || [0.03, 0.07];
+  return {
+    rate, nights, assumedNights, annual,
+    loPct: Math.round(lo * 100), hiPct: Math.round(hi * 100),
+    loVal: annual * lo, hiVal: annual * hi,
+  };
+}
+
+function interpretation(r){
+  const w = r.weak;
+  const two = w.slice(0,2).map(x => x.name);
+  const list = two.length === 2 ? `${two[0]} and ${two[1]}` : (two[0] || 'a few small details');
+  if (r.score >= 85)
+    return w.length ? `Your listing is in great shape — the main upside left is in ${two[0]}.`
+                    : `Your listing is firing on every cylinder we measure.`;
+  if (r.score >= 70)
+    return `Your listing has solid foundations, but it's leaving points on the table in ${list}.`;
+  if (r.score >= 50)
+    return `Your listing is around average — it's losing the most ground on ${list}.`;
+  return `Your listing has several structural gaps, most heavily in ${list}.`;
+}
+
+/* ============================================================
+   FIX ENGINE  (logic from the W2/3 spec, Part 3)
+   ============================================================ */
+function generateFixes(){
+  const A = state.answers;
+  const newListing = (A.q6 === 'new') && (A.q7 === '0');
+  const s = subScores(A); // needed to size "points left on the table" per fix
+  const f = [];
+
+  // qkeys = the question(s) behind this fix — used to auto-derive the evidence
+  // badge (Documented vs Best practice) from FACTORS, and to rank fixes by how
+  // many points they're worth (for the headline + quick-wins selection).
+  const add = (prio, area, title, action, impact, effort, qkeys) => {
+    const factor = Q_TO_FACTOR[qkeys[0]] || null;
+    const evidence = factor ? factor.evidence : 'practice';
+    const lost = qkeys.reduce((t,qk) => t + ((MAX[qk] || 0) - (s[qk] || 0)), 0);
+    f.push({ prio, area, title, action, impact, effort, evidence, lost, qkeys });
+  };
+
+  // friendly lists for missing items
+  const roomName = { bedrooms:'every bedroom', bathrooms:'the bathroom(s)', kitchen:'the kitchen', living:'the living/common area' };
+  const stdName  = { kitchen:'a kitchen', climate:'A/C or heating', parking:'parking' };
+
+  // ---- Photos ----
+  if (A.q1 === 'lt10')
+    add('high','Photos','You have fewer than 10 photos',
+      'Build the set up to 20–25 shots — every room, the exterior, and key spaces in natural daylight.',
+      'Airbnb’s own data on professional photography shows ~19% more bookings and ~21% higher earnings over a year — the clearest signal that photo quality, not just quantity, drives revenue (Airbnb, 14,700+ listings, 2024–2025).','project',['q1']);
+  else if (A.q1 === '10-14')
+    add('med','Photos','Your photo count is below the recommended range',
+      'Add photos to reach 20+, filling any gaps from the coverage question below.',
+      'Same revenue lever as a full set, with the remaining upside.','medium',['q1']);
+
+  const q2 = Array.isArray(A.q2) ? A.q2 : [];
+  if (A.q2 !== undefined){
+    if (!q2.includes('exterior'))
+      add('high','Photos','No exterior photo',
+        'Add a clear shot of the building, entrance, or street view.',
+        'A missing exterior reads as "something to hide" — a direct trust red flag.','quick',['q2']);
+    if (!q2.includes('natural_light'))
+      add('med','Photos','No natural-light photos',
+        'Re-shoot your key rooms during the day, curtains open.',
+        'Dark rooms signal uninviting spaces and quietly cost conversion.','medium',['q2']);
+    const missingRooms = ['bedrooms','bathrooms','kitchen','living'].filter(r => !q2.includes(r));
+    if (missingRooms.length)
+      add('low','Photos',"Some rooms aren't shown",
+        `Add the missing shots: ${missingRooms.map(r => roomName[r]).join(', ')}.`,
+        'Completes the set and removes "what aren\'t they showing?" doubt.','quick',['q2']);
+  }
+
+  // ---- Cover photo ----
+  if (['bedroom','kitchen','other'].includes(A.q3))
+    add('med','Cover photo','Your cover photo is a weaker choice',
+      'Swap it for your brightest, most spacious shot (outdoor space, living room, or a view) and A/B test it in the app.',
+      'The cover is the #1 first impression and the most-tested conversion lever.','quick',['q3']);
+
+  // ---- Copy ----
+  if (A.q4 === 'generic' || A.q4 === 'no')
+    add('med','Listing copy','Your title is generic',
+      'Lead with at least one specific detail — location, standout feature, or property type — in the first characters.',
+      'Lifts click-through from search; half of bookings happen on mobile, where titles truncate.','quick',['q4']);
+  if (A.q5 === 'gap')
+    add('high','Listing copy','A noticeable gap between listing and reality',
+      "Align your photos, title, and description with what guests actually find — and cut claims you can't back up.",
+      'Closes a double leak: lifts conversion AND protects your rating from post-stay disappointment.','medium',['q5']);
+  else if (A.q5 === 'mostly')
+    add('low','Listing copy','Minor expectation gaps remain',
+      'Revisit the spots where guests tend to be surprised on arrival.',
+      'Smooths small frictions before they turn into review comments.','quick',['q5']);
+
+  // ---- Rating & reviews (skipped in New Listing Mode) ----
+  if (!newListing){
+    if (A.q6 === 'lt4.5')
+      add('high','Rating','Your rating is below 4.5',
+        'Diagnose your weak categories, fix the recurring physical/operational cause, and start educating guests on how ratings work.',
+        'Hosts consistently report warnings once the average drops below 4.7 — and a sustained low average risks suspension.','project',['q6']);
+    else if (A.q6 === '4.5-4.69')
+      add('high','Rating',"You're below the Superhost threshold (4.8)",
+        'Same path: fix the recurring issue, work your category ratings, and educate guests before they review.',
+        'Climbing back to 4.8 unlocks Superhost.','project',['q6']);
+    else if (A.q6 === '4.7-4.79')
+      add('med','Rating',"You're just short of Superhost",
+        'Add review-rating education to your welcome and check-out messages.',
+        'Guest Favorite requires a 4.9+ rating — this kind of nudge is the lowest-effort lever toward closing that gap.','quick',['q6']);
+    else if (A.q6 === '4.8-4.89')
+      add('low','Rating','Superhost yes — Guest Favorite (4.9) not yet',
+        'Push on the small details that turn a good stay into a clean 5.',
+        'Guest Favorite (4.9+ rating, 5+ reviews) has become at least as important as Superhost for search visibility.','medium',['q6']);
+
+    if (A.q7 === '1-4')
+      add('high','Reviews',"You're under the 5-review trust threshold",
+        'Maximize your review rate: ask, make it easy, follow up with every guest.',
+        '5 reviews is the documented bar for trust and Guest Favorite eligibility.','project',['q7']);
+    else if (A.q7 === '5-9')
+      add('low','Reviews','Low review volume for your area',
+        'Keep growing the count steadily.',
+        'More reviews help conversion, with diminishing returns past ~25.','quick',['q7']);
+
+    const cats = (Array.isArray(A.q8) ? A.q8 : []).filter(v => v !== 'none' && v !== 'unknown');
+    if (Array.isArray(A.q8) && A.q8.includes('unknown'))
+      add('med','Category ratings',"You haven't checked your category ratings",
+        'Open your dashboard, read the per-category scores, then act on the weakest one.',
+        "You can't fix what you don't measure.",'quick',['q8']);
+    else if (cats.length)
+      add(cats.includes('cleanliness') ? 'high' : 'med','Category ratings','One or more categories are below 4.8',
+        'For cleanliness, tighten turnover and your checklist. For value, re-check price vs. the experience. For accuracy, align your copy.',
+        'Weak categories are the root cause dragging your overall rating down.',
+        cats.includes('cleanliness') ? 'project' : 'medium',['q8']);
+  }
+
+  // ---- Settings & visibility ----
+  if (A.q9 === '24h+')
+    add('high','Response time','Your average response is over 24 hours',
+      'Turn on push notifications, use quick replies/templates, and aim for under 1 hour.',
+      'Fast replies are a known ranking signal, and Superhost requires a 90% response rate within 24 hours. Near-zero cost to fix.','quick',['q9']);
+  else if (A.q9 === '6-24h')
+    add('med','Response time','Your response time is above the ideal',
+      'Bring it under 1–6 hours, ideally under 1.',
+      'Same documented lever, with the remaining upside.','quick',['q9']);
+  else if (A.q9 === 'unknown')
+    add('med','Response time',"You're not tracking your response time",
+      'Check your response rate in the dashboard.',
+      'Makes a documented ranking factor measurable.','quick',['q9']);
+
+  if (A.q10 === 'no')
+    add('med','Booking settings','Instant Book is off',
+      'Consider enabling it — optionally with guest requirements to filter who can book.',
+      "Documented visibility boost. Honestly: it's a personal risk choice, not a simple switch.",'quick',['q10']);
+
+  if (A.q11 === 'strict' || A.q11 === 'super_strict')
+    add('low','Booking settings','Your cancellation policy is strict',
+      'Consider Moderate or Firm if it fits your risk tolerance.',
+      "Best practice; the ranking impact here isn't documented.",'quick',['q11']);
+
+  if (A.q12 === '5+')
+    add('low','Minimum stay','Your minimum stay is 5+ nights',
+      'Lower it if cleaning allows — or deliberately position as a long-stay listing.',
+      'More search visibility, OR a real long-stay niche — 28+ night stays are 17% of all nights booked and have grown ~136% since 2019 (Airbnb, AirDNA/Furnished Finder).','quick',['q12']);
+
+  const q15 = Array.isArray(A.q15) ? A.q15 : [];
+  if (A.q15 !== undefined){
+    if (!q15.includes('wifi'))
+      add('high','Amenities','No verified Wi-Fi listed',
+        "Verify and state your real speed; upgrade if it's slow.",
+        'Airbnb lets hosts verify Wi-Fi speed in-app and flags listings as "fast Wi-Fi" at 50+ Mbps — one of the only amenities guests can filter and verify before booking.','medium',['q15']);
+    if (!q15.includes('self_checkin'))
+      add('med','Amenities','No self check-in',
+        'Add a smart lock, lockbox, or keypad.',
+        'Lifts conversion and cuts your operational load at arrival.','medium',['q15']);
+    const missingStd = ['kitchen','climate','parking'].filter(a => !q15.includes(a));
+    if (missingStd.length)
+      add('low','Amenities','Missing some expected amenities',
+        `Add what's realistic (${missingStd.map(a => stdName[a]).join(', ')}); otherwise set the expectation in your copy.`,
+        'These are standard expectations in many markets.','medium',['q15']);
+  }
+
+  if (A.q16 === 'none')
+    add('med','Activity','No updates in over a month',
+      'Make one real change a week — pricing, a photo, or calendar.',
+      'Inactivity is associated with ranking decay. Effort is near zero.','quick',['q16']);
+  else if (A.q16 === 'few')
+    add('low','Activity','Low listing activity',
+      'Keep a light weekly update routine.',
+      'Same lever, remaining upside.','quick',['q16']);
+
+  // ---- Pricing ----
+  if (A.q13 === 'never')
+    add('high','Pricing',"You've never checked your price against comps",
+      'Compare your TOTAL price (nightly + cleaning) against similar listings — not just the nightly rate.',
+      'Guests now see the total upfront, so a low nightly with a high cleaning fee no longer hides.','quick',['q13']);
+  else if (A.q13 === 'higher')
+    add('med','Pricing',"You're priced above comparable listings",
+      'Either justify the premium (photos, copy, amenities) or realign.',
+      'Directly affects conversion.','medium',['q13']);
+  else if (A.q13 === 'lower')
+    add('low','Pricing','You may be underpricing',
+      'Move back toward "in line" if your rating and photos support it.',
+      'Recovers margin without losing bookings — and avoids signaling "cheap".','quick',['q13']);
+
+  if (A.q14 === 'yes')
+    add('med','Pricing','Your cleaning fee tops a full night',
+      'Lower it and/or fold part of it into the nightly rate.',
+      'Cuts resentment and protects your cleanliness rating; the total stays visible either way.','quick',['q14']);
+
+  // ---- Guest communication ----
+  if (A.q17 === 'no')
+    add('med','Guest communication',"You don't explain how ratings work",
+      'Add a short note to your welcome/check-in about ratings, and invite guests to message you before reviewing.',
+      'Catching a problem before it becomes a review is the highest-leverage move toward the 4.9+ Guest Favorite bar. Minimal effort.','quick',['q17']);
+  else if (A.q17 === 'mention')
+    add('low','Guest communication',"You mention ratings but don't invite feedback",
+      'Add an explicit invite to reach out before they review.',
+      'Catches problems before they become star ratings.','quick',['q17']);
+
+  // ---- New Listing Mode extras ----
+  if (newListing){
+    add('high','Launch','Your path to the first 5 reviews',
+      'Take your first bookings at an intro price and ask for a review every time — aim for 5.',
+      '5 reviews is the trust threshold and the Guest Favorite eligibility bar.','project',['q7']);
+    add('high','Launch','The "new listing boost" isn’t what it used to be',
+      'Airbnb has sharply cut the automatic visibility new listings used to get — earn it from day one with photos, copy, price, and fast replies.',
+      'New listings now appear roughly half as often on page one as they did before the 2025 algorithm changes.','quick',['q6']);
+  }
+
+  const order = { high:0, med:1, low:2 };
+  f.sort((a,b) => order[a.prio] - order[b.prio] || b.lost - a.lost);
+  return f;
+}
+
+/* ============================================================
+   RENDER: REPORT
+   ============================================================ */
+function renderReport(){
+  const r = computeScore();
+  const fixes = generateFixes();
+  const prioLabel = { high:'High priority', med:'Medium', low:'Low' };
+
+  document.title = state.listingName
+    ? `${state.listingName} — Listing Health Report`
+    : 'Listing Health Report';
+
+  // ---- macro-area bars: the big picture (spec 2.2) ----
+  const areasHTML = r.areas.map(a => `
+    <div class="arow">
+      <span class="an">${a.label}</span>
+      <span class="av">${a.earned} / ${a.max}</span>
+      <span class="abar"><i data-pct="${a.pct}" style="width:0%;background:${a.color}"></i></span>
+    </div>`).join('');
+
+  // ---- detailed scorecard, factor by factor: the receipts ----
+  const scRows = FACTORS
+    .filter(fct => !(r.newListing && fct.q.some(qk => NLM_EXCLUDE.includes(qk))))
+    .map(fct => {
+      const earned = fct.q.reduce((t,qk) => t + (r.sub[qk] || 0), 0);
+      const max = fct.q.reduce((t,qk) => t + (MAX[qk] || 0), 0);
+      const pct = max ? (earned / max) * 100 : 0;
+      const status = pct >= 85 ? 'ok' : pct >= 50 ? 'warn' : 'bad';
+      const icon = status === 'ok' ? I.scOk : status === 'warn' ? I.scWarn : I.scBad;
+      return `<div class="scrow">
+          <span class="sf">
+            <span class="sfname">${fct.label}</span>
+            <span class="sftag ${fct.evidence}">${fct.evidence === 'documented' ? 'Documented' : 'Best practice'}</span>
+          </span>
+          <span class="ss">${Math.round(earned)}<span class="sd">/${max}</span></span>
+          <span class="sst ${status}">${icon}</span>
+        </div>`;
+    }).join('');
+
+  // ---- full fix cards ----
+  const fixHTML = fixes.map(fx => {
+    const em = EFFORT_META[fx.effort] || EFFORT_META.medium;
+    return `
+    <div class="fixcard ${fx.prio}">
+      <div class="fixhead">
+        <span class="prio ${fx.prio}">${prioLabel[fx.prio]}</span>
+        <span class="fixarea">${fx.area}</span>
+        <span class="evtag ${fx.evidence}">${fx.evidence === 'documented' ? 'Documented' : 'Best practice'}</span>
+        <span class="efftag">${em.label} · ${em.hint}</span>
+      </div>
+      <p class="ft">${fx.title}</p>
+      <p class="fa">${fx.action}</p>
+      <p class="fi"><b>Why it matters · </b>${fx.impact}</p>
+    </div>`;
+  }).join('');
+
+  // ---- quick wins: highest priority, lowest effort, max 3 ----
+  const quickWins = fixes.filter(fx => fx.effort === 'quick').slice(0, 3);
+  const qwHTML = quickWins.map((fx, i) => `
+    <div class="qwcard">
+      <span class="qwnum">${i + 1}</span>
+      <div class="qwbody">
+        <p class="qwt">${fx.title}</p>
+        <p class="qwa">${fx.action}</p>
+      </div>
+      <span class="qweffort">${EFFORT_META.quick.hint}</span>
+    </div>`).join('');
+
+  // ---- headline: the single biggest lever on the table ----
+  const headlineHTML = fixes.length ? `
+    <div class="headline">
+      ${I.spark}
+      <div>
+        <span class="hk">Biggest single lever</span>
+        <p class="ht">${fixes[0].title}</p>
+        <p class="hb">${fixes[0].impact}</p>
+      </div>
+    </div>` : '';
+
+  // ---- projection: the realistic lift from the quick wins (varies with the answers).
+  // NB: a "fix everything" projection lands near the same ceiling for almost any
+  // listing — recovering a question's gap always tops it out, so that number barely
+  // moves and reads as canned. The quick-wins number is the one that's actually
+  // personal and motivating, so that's what the ladder shows. ----
+  const projQuick = projectScore(quickWins, r);
+  const gain = projQuick - r.score;
+
+  // ---- health ladder: where you stand + where your quick wins take you (the signature) ----
+  const ladderHTML = `
+    <div class="ladder">
+      <div class="ladtrack" aria-hidden="true">
+        <span class="ladzone z-crit"></span>
+        <span class="ladzone z-below"></span>
+        <span class="ladzone z-solid"></span>
+        <span class="ladzone z-exc"></span>
+        ${gain > 0 ? `<span class="ladhead" style="left:${r.score}%;width:${gain}%"></span>` : ''}
+        <span class="ladfill" style="width:${r.score}%;background:${r.band.color}"></span>
+        <span class="ladtick" style="left:70%"></span>
+        <span class="ladtick" style="left:85%"></span>
+        <span class="ladmark you" style="left:${r.score}%;border-color:${r.band.color}"></span>
+        ${gain > 0 ? `<span class="ladmark goal" style="left:${projQuick}%"></span>` : ''}
+      </div>
+      <div class="ladscale" aria-hidden="true">
+        <span class="ladtl" style="left:70%">70</span>
+        <span class="ladtl" style="left:85%">85</span>
+      </div>
+      <div class="ladlegend">
+        <span class="ll"><span class="lldot" style="background:${r.band.color}"></span>You're here · <b>${r.score}</b> · ${r.band.label}</span>
+        ${gain > 0
+          ? `<span class="ll"><span class="lldot ghost"></span>After your quick wins · <b>${projQuick}</b></span>`
+          : `<span class="ll muted">You're near the ceiling of what this audit measures.</span>`}
+        <span class="ll milestones">Milestones — Solid <b>70</b> · Excellent <b>85</b></span>
+      </div>
+    </div>`;
+
+  // ---- revenue at stake: illustrative, built from the host's own inputs ----
+  const est = revenueEstimate(r);
+  const revHTML = `
+    <div class="revcard">
+      <span class="revcard-k">${I.spark} ${est ? 'What stronger performance is worth to you' : 'See what this is worth to you'}</span>
+      ${est ? `
+        <p class="revbig">${money(est.loVal)}–${money(est.hiVal)}<span class="revper"> / year</span></p>
+        <p class="revsub">At ${money(est.rate)}/night and ${est.nights} booked nights a month, you're earning about <b>${money(est.annual)}/year</b>. A conservative <b>${est.loPct}–${est.hiPct}%</b> booking lift — the kind that closing your gaps can drive — is worth the range above.${est.assumedNights ? ` <span class="revnote">(Assuming ~12 booked nights/month — add yours to refine.)</span>` : ''}</p>
+      ` : `
+        <p class="revsub">Add your numbers and we'll estimate the revenue your gaps are leaving on the table — from your figures, not ours.</p>
+      `}
+      <div class="revcalc-row">
+        <label class="revcell" for="rateInput2">
+          <span class="revcap">Avg. nightly rate</span>
+          <span class="revwrap"><span class="revcur">$</span><input type="text" inputmode="decimal" id="rateInput2" maxlength="9" placeholder="120" value="${state.nightlyRate != null ? state.nightlyRate : ''}"></span>
+        </label>
+        <label class="revcell" for="nightsInput2">
+          <span class="revcap">Booked nights / month</span>
+          <span class="revwrap"><input type="text" inputmode="numeric" id="nightsInput2" maxlength="2" placeholder="12" value="${state.nightsPerMonth != null ? state.nightsPerMonth : ''}"></span>
+        </label>
+        <button class="btn btn-teal revgo" id="revCalcBtn">${est ? 'Update' : 'Show estimate'}</button>
+      </div>
+      <p class="revhint" id="revHint"></p>
+      ${est ? `<p class="revdisc">Illustrative — built from your own inputs and a deliberately conservative assumption, not a guarantee. Your market sets the ceiling.</p>` : ''}
+    </div>`;
+
+  const confHTML = r.lowConfidence ? `
+    <div class="callout info">${I.info}
+      <span><b>Some answers were estimates.</b> You marked ${r.unsure} item${r.unsure>1?'s':''} as
+      "not sure / haven't checked". Open your Airbnb dashboard, fill in the real numbers, and re-run
+      this audit for a sharper score.</span>
+    </div>` : '';
+
+  const dynHTML = r.score < 70 ? `
+    <div class="callout tip">${I.tip}
+      <span><b>Turn on dynamic pricing.</b> Even Airbnb's free smart-pricing rules — or a tool like
+      PriceLabs — adjust your rates to demand. A 2025 industry study (541 listings, 34 countries) found
+      dynamic pricing linked to 15–36% more revenue vs. static rates. <em>(Industry recommendation, not a diagnostic fix.)</em></span>
+    </div>` : '';
+
+  const nlmHTML = r.newListing ? `<span class="nlmtag">${I.spark} New Listing Mode</span>` : '';
+
+  const metaLine = `${state.listingName ? `For <b>${escapeHTML(state.listingName)}</b> · ` : ''}Generated ${reportDate()}`;
+
+  app.innerHTML = progressHTML() + `
+    <div class="stage fade report">
+      <div class="rgauge">
+        ${nlmHTML}
+        <div class="gauge" id="gauge" style="background:conic-gradient(${r.band.color} 0%, var(--line) 0)">
+          <div class="gaugeface"><div class="num" id="scoreNum">0</div><div class="den">/ 100</div></div>
+        </div>
+        <span class="bandpill" style="color:${r.band.color};border-color:${r.band.color}">
+          <span class="bdot"></span>${r.band.label}
+        </span>
+        <p class="reportmeta">${metaLine}</p>
+      </div>
+
+      <h1 class="title">Your Listing Health Score</h1>
+      <p class="interp">${interpretation(r)}</p>
+
+      ${ladderHTML}
+      ${revHTML}
+      ${headlineHTML}
+
+      <p class="bandmeaning">${r.band.meaning}</p>
+
+      <div class="areas">${areasHTML}</div>
+
+      <h2 class="rsec">Your scorecard, factor by factor</h2>
+      <p class="rsecsub">13 weighted factors. "Documented" means Airbnb has confirmed the link; "Best practice" means strong but indirect evidence.</p>
+      <div class="scorecard">
+        <div class="scgrid-head"><span>Factor</span><span>Score</span><span></span></div>
+        ${scRows}
+      </div>
+
+      ${confHTML}
+      ${dynHTML}
+
+      ${quickWins.length ? `
+      <div class="qwblock">
+        <p class="qwh">${I.tip} Do these first</p>
+        <p class="qwsub">Highest impact, lowest effort — knock these out tonight.</p>
+        ${qwHTML}
+      </div>` : ''}
+
+      <h2 class="rsec">Your full fix list</h2>
+      <p class="rsecsub">Ordered by impact. High-priority items move the needle most.</p>
+      <div class="fixlist">${fixHTML}</div>
+
+      <div class="limits">
+        <b>What this audit can't do:</b> it can't create demand where a market is saturated.
+        It optimizes your <em>relative</em> position — how you stack up against comparable listings —
+        not the size of the pie. Treat the fixes as leverage, not magic.
+      </div>
+
+      <div class="flagship">
+        <span class="fl-k">Next step</span>
+        The operational side — turnover checklists, guest messaging, maintenance logs, P&amp;L —
+        is where most hosts lose hours every week. That's the natural step after this audit.
+      </div>
+
+      <div class="nav printhide">
+        <button class="btn btn-ghost" id="editBtn">${I.back} Edit answers</button>
+        <button class="btn btn-primary" id="printBtn">${I.print} Print / Save as PDF</button>
+      </div>
+    </div>`;
+
+  // animate gauge fill + counting number
+  animateGauge(r.score, r.band.color);
+  app.querySelectorAll('.arow .abar i').forEach(bar => {
+    requestAnimationFrame(() => { bar.style.width = (bar.dataset.pct || 0) + '%'; });
+  });
+
+  const revBtn = document.getElementById('revCalcBtn');
+  if (revBtn) revBtn.addEventListener('click', () => {
+    const rv = parseNum(document.getElementById('rateInput2').value, 1, 100000);
+    const nv = parseNum(document.getElementById('nightsInput2').value, 1, 31);
+    const hint = document.getElementById('revHint');
+    if (rv == null){
+      if (hint) hint.textContent = 'Enter your nightly rate as a number to see the estimate.';
+      return;
+    }
+    state.nightlyRate = rv;
+    state.nightsPerMonth = nv; // null is fine — falls back to a stated conservative default
+    render();
+  });
+
+  document.getElementById('editBtn').addEventListener('click', () => {
+    state.screen = 'review';
+    render();
+  });
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+}
+
+function animateGauge(score, color){
+  const gauge = document.getElementById('gauge');
+  const num = document.getElementById('scoreNum');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce){
+    if (gauge) gauge.style.background = `conic-gradient(${color} ${score}%, var(--line) 0)`;
+    if (num) num.textContent = score;
+    return;
+  }
+  const dur = 950, t0 = performance.now();
+  function frame(t){
+    const k = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - k, 3); // ease-out cubic
+    const val = Math.round(score * eased);
+    if (gauge) gauge.style.background = `conic-gradient(${color} ${(score*eased)}%, var(--line) 0)`;
+    if (num) num.textContent = val;
+    if (k < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+
+function render(){
+  if (state.screen === 'start') renderStart();
+  else if (state.screen === 'question') renderQuestion();
+  else if (state.screen === 'review') renderReview();
+  else if (state.screen === 'report') renderReport();
+  // Only scroll to top when we actually move to a new screen/question —
+  // not when a selection repaints the same card.
+  const key = state.screen + ':' + (state.screen === 'question' ? state.index : '');
+  if (key !== render._lastKey){
+    window.scrollTo({ top:0, behavior:'smooth' });
+    render._lastKey = key;
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (state.screen !== 'question') return;
+  const q = QUESTIONS[state.index];
+  // number keys 1-9 select the matching option
+  if (/^[1-9]$/.test(e.key)){
+    const i = parseInt(e.key,10) - 1;
+    if (q.options[i]){
+      const o = q.options[i];
+      selectOption(q, o.value, !!o.exclusive);
+      e.preventDefault();
+    }
+  }
+  if (e.key === 'Enter'){
+    const next = document.getElementById('nextBtn');
+    if (next && !next.disabled){ goNext(); e.preventDefault(); }
+  }
+});
+
+render();
+</script>
+</body>
+</html>
