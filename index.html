@@ -543,26 +543,216 @@
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
   }
+
+  /* ============================================================
+     LICENSE GATE — full-screen overlay, blocks app until validated
+     ============================================================ */
+  #licenseGate{
+    position:fixed; inset:0; z-index:9999;
+    background:linear-gradient(180deg, #0E7C6B 0%, #0a5d50 100%);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px; box-sizing:border-box;
+    font-family:var(--body);
+    animation:lg-fade .25s ease-out;
+  }
+  #licenseGate.lg-hide{ animation:lg-out .35s ease-in forwards; pointer-events:none; }
+  @keyframes lg-fade { from{opacity:0} to{opacity:1} }
+  @keyframes lg-out { to{opacity:0; visibility:hidden} }
+
+  .lg-card{
+    width:100%; max-width:440px;
+    background:var(--surface); color:var(--ink);
+    border-radius:var(--radius); padding:32px 28px;
+    box-shadow:0 24px 60px rgba(0,0,0,.25);
+  }
+  .lg-brand{
+    font-family:var(--display); font-weight:700;
+    font-size:13px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--teal); margin-bottom:18px;
+  }
+  .lg-h{
+    font-family:var(--display); font-weight:700;
+    font-size:24px; line-height:1.2; margin:0 0 10px;
+  }
+  .lg-sub{
+    font-size:14.5px; line-height:1.5; color:var(--muted);
+    margin:0 0 22px;
+  }
+  .lg-label{
+    display:block; font-size:12.5px; font-weight:600;
+    color:var(--ink); margin:0 0 8px; letter-spacing:.02em;
+  }
+  .lg-input{
+    width:100%; box-sizing:border-box;
+    padding:13px 14px; font-family:var(--body); font-size:15px;
+    border:1.5px solid var(--line); border-radius:var(--radius-sm);
+    background:#fff; color:var(--ink); outline:none;
+    transition:border-color .15s ease;
+    letter-spacing:.04em;
+  }
+  .lg-input:focus{ border-color:var(--teal-bright); }
+  .lg-input.lg-err{ border-color:#c0492f; }
+  .lg-btn{
+    width:100%; margin-top:14px;
+    padding:14px 16px; font-family:var(--body); font-size:15px; font-weight:600;
+    background:var(--teal); color:#fff;
+    border:none; border-radius:var(--radius-sm); cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .lg-btn:hover:not(:disabled){ background:var(--teal-bright); }
+  .lg-btn:active:not(:disabled){ transform:translateY(1px); }
+  .lg-btn:disabled{ background:var(--muted); cursor:wait; opacity:.7; }
+  .lg-msg{
+    margin-top:14px; font-size:13.5px; line-height:1.45;
+    min-height:18px;
+  }
+  .lg-msg.lg-msg-err{ color:#c0492f; }
+  .lg-msg.lg-msg-ok{ color:var(--teal); }
+  .lg-hint{
+    margin-top:22px; padding-top:18px;
+    border-top:1px solid var(--line-soft);
+    font-size:12.5px; color:var(--muted); line-height:1.5;
+  }
+  .lg-hint b{ color:var(--ink); font-weight:600; }
 </style>
 </head>
 <body>
-<div id="app" aria-live="polite"></div>
-
-<!-- ============================================================
-     MAISORA LICENSE GATE — copre il tool finché non viene
-     inserita una license key Gumroad valida. Non tocca il
-     tool sottostante: è solo un overlay sopra.
-     ============================================================ -->
-<div id="mg-gate" style="position:fixed;inset:0;z-index:999999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--body);">
-  <div style="max-width:380px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px 28px;">
-    <h2 style="font-family:var(--display);font-size:22px;margin:0 0 6px;color:var(--ink);">Unlock your Audit</h2>
-    <p style="font-size:14px;color:var(--muted);margin:0 0 20px;line-height:1.5;">Enter the license key from your Gumroad purchase email.</p>
-    <input id="mg-key" type="text" placeholder="License key" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:14px;margin-bottom:10px;font-family:var(--body);">
-    <button id="mg-btn" style="width:100%;padding:12px;border:none;border-radius:var(--radius-sm);background:var(--teal);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--body);">Unlock</button>
-    <p id="mg-err" style="display:none;color:#B23A2E;font-size:13px;margin:10px 0 0;"></p>
-    <p style="font-size:12px;color:var(--muted);margin:16px 0 0;">Don't have a key yet? <a href="https://gumroad.com/l/REPLACE_WITH_GUMROAD_SLUG" style="color:var(--teal);">Get the Listing Health Audit — $67</a></p>
+<!-- License gate overlay — shown until a valid key unlocks the tool -->
+<div id="licenseGate" role="dialog" aria-modal="true" aria-labelledby="lgTitle">
+  <div class="lg-card">
+    <div class="lg-brand">Maisora</div>
+    <h1 id="lgTitle" class="lg-h">Listing Health Audit</h1>
+    <p class="lg-sub">Enter the license key from your purchase email to access the audit.</p>
+    <label class="lg-label" for="lgKey">License key</label>
+    <input id="lgKey" class="lg-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" />
+    <button id="lgBtn" class="lg-btn" type="button">Unlock the audit</button>
+    <div id="lgMsg" class="lg-msg" aria-live="polite"></div>
+    <div class="lg-hint">
+      <b>Don't have a key yet?</b> Get one at <a href="https://getmaisora.gumroad.com" style="color:var(--teal);text-decoration:none;font-weight:600">getmaisora.gumroad.com</a> — your key arrives by email right after checkout.
+    </div>
   </div>
 </div>
+
+<script>
+/* ============================================================
+   LICENSE GATE — runs before the main app script
+   - Validates against Gumroad's licenses/verify endpoint
+   - Preview key bypasses the API (internal demos only)
+   - Successful keys are cached in localStorage so paying users
+     don't re-enter on every visit
+   - Append ?reset to the URL to clear the cache and re-show gate
+   ============================================================ */
+(function(){
+  "use strict";
+
+  const PRODUCT_ID  = 'sPOa3E4l-uFHk2JRHkR4_g==';
+  const PREVIEW_KEY = 'MAISORA-PREVIEW-2026';
+  const STORAGE_KEY = 'maisora_license_v2';      // bumping the version clears legacy cache
+  const API_URL     = 'https://api.gumroad.com/v2/licenses/verify';
+
+  const gate  = document.getElementById('licenseGate');
+  const input = document.getElementById('lgKey');
+  const btn   = document.getElementById('lgBtn');
+  const msg   = document.getElementById('lgMsg');
+
+  // Allow ?reset in URL to wipe the cached license (handy for testing)
+  if (location.search.indexOf('reset') !== -1) {
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+  }
+
+  // If a previously-validated key is cached, unlock immediately
+  try {
+    const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (cached && cached.key && cached.validatedAt) {
+      unlock(/*silent=*/true);
+      return;
+    }
+  } catch(e){ /* ignore */ }
+
+  // Show the gate (in case it was hidden by CSS or earlier code)
+  gate.style.display = 'flex';
+  setTimeout(() => input.focus(), 100);
+
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  input.addEventListener('input', () => {
+    input.classList.remove('lg-err');
+    msg.textContent = ''; msg.className = 'lg-msg';
+  });
+
+  function setMsg(text, kind){
+    msg.textContent = text;
+    msg.className = 'lg-msg' + (kind ? ' lg-msg-' + kind : '');
+  }
+
+  function setLoading(on){
+    btn.disabled = !!on;
+    btn.textContent = on ? 'Checking…' : 'Unlock the audit';
+  }
+
+  function unlock(silent){
+    if (!silent) setMsg('Key accepted. Loading the audit…', 'ok');
+    setTimeout(() => {
+      gate.classList.add('lg-hide');
+      setTimeout(() => { gate.style.display = 'none'; }, 400);
+    }, silent ? 0 : 350);
+  }
+
+  async function submit(){
+    const key = (input.value || '').trim();
+    if (!key) {
+      input.classList.add('lg-err');
+      setMsg('Please enter your license key.', 'err');
+      input.focus();
+      return;
+    }
+
+    // Internal preview key — instant unlock, no network call
+    if (key === PREVIEW_KEY) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ key:key, validatedAt:Date.now() })); } catch(e){}
+      unlock();
+      return;
+    }
+
+    setLoading(true);
+    setMsg('');
+
+    try {
+      const body = new URLSearchParams();
+      body.append('product_id', PRODUCT_ID);
+      body.append('license_key', key);
+      body.append('increment_uses_count', 'false');
+
+      const res = await fetch(API_URL, { method:'POST', body:body });
+      const data = await res.json();
+
+      const refunded   = data && data.purchase && data.purchase.refunded === true;
+      const disputed   = data && data.purchase && data.purchase.disputed === true;
+      const chargeback = data && data.purchase && data.purchase.chargebacked === true;
+
+      if (data && data.success === true && !refunded && !disputed && !chargeback) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ key:key, validatedAt:Date.now() })); } catch(e){}
+        setLoading(false);
+        unlock();
+        return;
+      }
+
+      setLoading(false);
+      input.classList.add('lg-err');
+      if (refunded || disputed || chargeback) {
+        setMsg('This license is no longer active. Reach out at getmaisora@gmail.com if this seems wrong.', 'err');
+      } else {
+        setMsg('That key doesn\'t match. Double-check the email from Gumroad and try again.', 'err');
+      }
+    } catch (err) {
+      setLoading(false);
+      setMsg('Couldn\'t reach the verification server. Check your connection and try again.', 'err');
+    }
+  }
+})();
+</script>
+
+<div id="app" aria-live="polite" style="display:block"></div>
 
 <script>
 "use strict";
@@ -1347,7 +1537,7 @@ function generateFixes(){
   if (A.q1 === 'lt10')
     add('high','Photos','You have fewer than 10 photos',
       'Build the set up to 20–25 shots — every room, the exterior, and key spaces in natural daylight.',
-      'Airbnb’s own data on professional photography shows ~19% more bookings and ~21% higher earnings over a year — the clearest signal that photo quality, not just quantity, drives revenue (Airbnb, 14,700+ listings, 2024–2025).','project',['q1']);
+      'Airbnb’s own data on its Professional Photography program shows hosts saw ~19% more bookings and ~21% higher earnings over a 12-month period — clear evidence that photo quality, not just quantity, drives revenue (Airbnb Pro Photography, 14,700+ listings, 2024–2025).','project',['q1']);
   else if (A.q1 === '10-14')
     add('med','Photos','Your photo count is below the recommended range',
       'Add photos to reach 20+, filling any gaps from the coverage question below.',
@@ -1457,7 +1647,7 @@ function generateFixes(){
   if (A.q12 === '5+')
     add('low','Minimum stay','Your minimum stay is 5+ nights',
       'Lower it if cleaning allows — or deliberately position as a long-stay listing.',
-      'More search visibility, OR a real long-stay niche — 28+ night stays are 17% of all nights booked and have grown ~136% since 2019 (Airbnb, AirDNA/Furnished Finder).','quick',['q12']);
+      'More search visibility, OR a real long-stay niche — 28+ night stays are ~17% of all nights booked, and have more than doubled since 2019 (Airbnb SEC filings, 2024–2025).','quick',['q12']);
 
   const q15 = Array.isArray(A.q15) ? A.q15 : [];
   if (A.q15 !== undefined){
@@ -1521,7 +1711,7 @@ function generateFixes(){
       '5 reviews is the trust threshold and the Guest Favorite eligibility bar.','project',['q7']);
     add('high','Launch','The "new listing boost" isn’t what it used to be',
       'Airbnb has sharply cut the automatic visibility new listings used to get — earn it from day one with photos, copy, price, and fast replies.',
-      'New listings now appear roughly half as often on page one as they did before the 2025 algorithm changes.','quick',['q6']);
+      'New listings now appear roughly half as often on page one as they did before the 2025 Summer Release — Airbnb quietly cut the new-listing boost (Homesberg, 85K first-page audit, 2025).','quick',['q6']);
   }
 
   const order = { high:0, med:1, low:2 };
@@ -1680,8 +1870,8 @@ function renderReport(){
   const dynHTML = r.score < 70 ? `
     <div class="callout tip">${I.tip}
       <span><b>Turn on dynamic pricing.</b> Even Airbnb's free smart-pricing rules — or a tool like
-      PriceLabs — adjust your rates to demand. A 2025 industry study (541 listings, 34 countries) found
-      dynamic pricing linked to 15–36% more revenue vs. static rates. <em>(Industry recommendation, not a diagnostic fix.)</em></span>
+      PriceLabs — adjust your rates to demand. A 2025 Your.Rentals study (541 listings, 34 countries) found
+      dynamic pricing linked to up to 36% more revenue vs. static rates. <em>(Industry recommendation, not a diagnostic fix.)</em></span>
     </div>` : '';
 
   const nlmHTML = r.newListing ? `<span class="nlmtag">${I.spark} New Listing Mode</span>` : '';
@@ -1833,67 +2023,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 render();
-</script>
-
-<script>
-(function(){
-  // ⚠️ DA FARE STASERA: sostituisci con il product_id reale —
-  // lo trovi su Gumroad quando abiliti "Generate a unique license
-  // key per sale" nel content tab del prodotto.
-  var GUMROAD_PRODUCT_ID = "sPOa3E4l-uFHk2JRHkR4_g==";
-  var STORAGE_KEY = "mg_unlocked_v1";
-  // Chiave di anteprima fissa: usala per fare gli screenshot stasera
-  // e per far provare il tool a un influencer senza fargli pagare.
-  // Non è pubblica da nessuna parte: la dai tu, a voce o in chat.
-  var PREVIEW_KEY = "MAISORA-PREVIEW-2026";
-
-  var gate = document.getElementById('mg-gate');
-  if (localStorage.getItem(STORAGE_KEY) === 'true') {
-    gate.style.display = 'none';
-  }
-
-  document.getElementById('mg-btn').addEventListener('click', unlock);
-  document.getElementById('mg-key').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') unlock();
-  });
-
-  function unlock(){
-    var key = document.getElementById('mg-key').value.trim();
-    var err = document.getElementById('mg-err');
-    err.style.display = 'none';
-    if (!key) {
-      err.textContent = 'Enter your license key.';
-      err.style.display = 'block';
-      return;
-    }
-    if (key === PREVIEW_KEY) {
-      localStorage.setItem(STORAGE_KEY, 'true');
-      gate.style.display = 'none';
-      return;
-    }
-    var body = new URLSearchParams();
-    body.append('product_id', GUMROAD_PRODUCT_ID);
-    body.append('license_key', key);
-    body.append('increment_uses_count', 'false');
-
-    fetch('https://api.gumroad.com/v2/licenses/verify', { method:'POST', body:body })
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        var ok = data.success && data.purchase && !data.purchase.refunded && !data.purchase.disputed;
-        if (ok) {
-          localStorage.setItem(STORAGE_KEY, 'true');
-          gate.style.display = 'none';
-        } else {
-          err.textContent = 'Key not valid. Check your Gumroad receipt email.';
-          err.style.display = 'block';
-        }
-      })
-      .catch(function(){
-        err.textContent = 'Connection error — try again in a moment.';
-        err.style.display = 'block';
-      });
-  }
-})();
 </script>
 </body>
 </html>
