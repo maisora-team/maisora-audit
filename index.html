@@ -264,12 +264,15 @@
   .gauge{
     width:148px;height:148px;margin:8px auto 18px;border-radius:50%;
     display:grid;place-items:center;position:relative;
+  }
+  .gaugering{
+    position:absolute;inset:0;border-radius:50%;
     background:conic-gradient(var(--line) 0 100%);
     -webkit-mask:radial-gradient(farthest-side,transparent 64%, #000 65%);
             mask:radial-gradient(farthest-side,transparent 64%, #000 65%);
   }
   .gaugeface{
-    position:relative;text-align:center;
+    position:relative;text-align:center;z-index:1;
   }
   .gaugeface .num{ font-family:var(--display);font-weight:700;font-size:40px;color:var(--muted);letter-spacing:-.02em; }
   .gaugeface .den{ font-size:13px;color:var(--muted);font-weight:600; }
@@ -1882,7 +1885,8 @@ function renderReport(){
     <div class="stage fade report">
       <div class="rgauge">
         ${nlmHTML}
-        <div class="gauge" id="gauge" style="background:conic-gradient(${r.band.color} 0%, var(--line) 0)">
+        <div class="gauge" id="gauge">
+          <div class="gaugering" id="gaugering" style="background:conic-gradient(${r.band.color} 0%, var(--line) 0)"></div>
           <div class="gaugeface"><div class="num" id="scoreNum">0</div><div class="den">/ 100</div></div>
         </div>
         <span class="bandpill" style="color:${r.band.color};border-color:${r.band.color}">
@@ -1969,7 +1973,7 @@ function renderReport(){
 }
 
 function animateGauge(score, color){
-  const gauge = document.getElementById('gauge');
+  const gauge = document.getElementById('gaugering');
   const num = document.getElementById('scoreNum');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce){
